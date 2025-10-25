@@ -157,32 +157,72 @@ exports.removeTagFromMultipleProducts = (req, res) => {
     });
 };
 
+// Xoá tất cả tag khỏi selected products
+exports.nukeAllTagsFromSelectedProducts = (req, res) => {
+    const { product_ids } = req.body;
+
+    if (!Array.isArray(product_ids) || product_ids.length === 0) {
+        return res.status(400).json({ error: "Danh sách sản phẩm không hợp lệ" });
+    }
+
+    const sql = "DELETE FROM product_tags WHERE product_id IN (?)";
+    db.query(sql, [product_ids], (err, result) => {
+        if (err) {
+            console.error("Nuke error:", err);
+            return res.status(500).json({ error: "Xóa tất cả tag thất bại" });
+        }
+
+        res.status(200).json({ message: "Đã xóa tất cả tag khỏi các sản phẩm đã chọn" });
+    });
+};
+
+
 // Lọc sản phẩm theo tag, category, brand
 exports.getFilteredProducts = (req, res) => {
     const { search = "", category = "all", brand = "all", sort = "asc" } = req.query;
 
-    let sql = `SELECT product_id, name, category_id, brand_id FROM products WHERE 1=1`;
+    let sql = `
+        SELECT 
+            p.product_id, 
+            p.name, 
+            p.category_id, 
+            p.brand_id,
+            GROUP_CONCAT(t.name SEPARATOR ', ') AS tag_names
+        FROM products p
+        LEFT JOIN product_tags pt ON p.product_id = pt.product_id
+        LEFT JOIN tags t ON pt.tag_id = t.id
+        WHERE 1=1
+    `;
     const params = [];
 
     if (search) {
-        sql += ` AND name LIKE ?`;
+        sql += ` AND p.name LIKE ?`;
         params.push(`%${search}%`);
     }
 
     if (category !== "all") {
-        sql += ` AND category_id = ?`;
+        sql += ` AND p.category_id = ?`;
         params.push(category);
     }
 
     if (brand !== "all") {
-        sql += ` AND brand_id = ?`;
+        sql += ` AND p.brand_id = ?`;
         params.push(brand);
     }
 
-    sql += ` ORDER BY name ${sort === "desc" ? "DESC" : "ASC"}`;
+    sql += ` GROUP BY p.product_id ORDER BY p.name ${sort === "desc" ? "DESC" : "ASC"}`;
 
     db.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(200).json(results);
+
+        const formatted = results.map(p => ({
+            ...p,
+            tags: p.tag_names
+                ? p.tag_names.split(', ').map(name => ({ name }))
+                : []
+        }));
+
+        res.status(200).json(formatted);
     });
 };
+

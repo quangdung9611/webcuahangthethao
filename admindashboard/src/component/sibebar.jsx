@@ -12,7 +12,8 @@ const Sidebar = () => {
         <li><Link to="/product-material">📦 Materials</Link></li>
         <li><Link to="/brand">Brand</Link></li>
         <li><Link to="/category"> Categories</Link></li>
-        <li><Link to="/tags">Tag Management</Link></li>
+        <li><Link to="/tags">Tag Assignment Panel</Link></li>
+        <li><Link to="/tag-manager">Tag Manager</Link></li>
         <li><Link to="/voucher">Voucher</Link></li>
         <li><Link to="/flash-sale">Flash Sales</Link></li>
         <li><Link to="/flash-sale-products">Flash Sales Products</Link></li>

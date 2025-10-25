@@ -1,6 +1,7 @@
 /* ✅ Category slider wrapper — adjusted vertical spacing */
 .category-selector-wrapper {
-  margin: 20px auto -45px; /* ✅ Adds space above, pulls closer below */
+  margin: 20px auto -45px;
+  /* ✅ Adds space above, pulls closer below */
   padding: 0 10px;
 }
 

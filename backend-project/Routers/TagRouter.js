@@ -10,6 +10,7 @@ router.delete("/remove-multiple", TagControllers.removeTagFromMultipleProducts);
 // CRUD routes
 router.post("/", TagControllers.createTag);
 router.get("/", TagControllers.getAllTags);
+router.delete("/remove-all", TagControllers.nukeAllTagsFromSelectedProducts);
 router.get("/:tagId", TagControllers.getTagById);
 router.put("/:tagId", TagControllers.updateTag);
 router.delete("/:tagId", TagControllers.deleteTag);

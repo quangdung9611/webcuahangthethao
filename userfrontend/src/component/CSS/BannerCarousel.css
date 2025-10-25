@@ -1,16 +1,29 @@
+/* Wrapper for the entire carousel */
+.banner-carousel-wrapper {
+    width: 100%;
+    overflow: visible;
+    /* Allows dots and captions to show */
+    margin-bottom: 60px;
+    position: relative;
+}
+
+/* Each banner slide */
 .banner-slide {
     position: relative;
     width: 100%;
-    height: 400px;
+    height: 100%;
     overflow: hidden;
 }
 
+/* Banner image */
 .banner-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
+/* Caption over the banner */
 .banner-caption {
     position: absolute;
     bottom: 30px;
@@ -21,9 +34,33 @@
     padding: 10px 20px;
     font-size: 1.5rem;
     border-radius: 5px;
+    max-width: 90%;
+    text-align: center;
+    z-index: 5;
 }
 
-.carousel-wrapper {
-    margin-bottom: 60px;
-    /* Bọc carousel lại và tách content ở dưới không cho bị chạm tới các thành phần của carousel */
+/* Carousel dots container */
+.banner-carousel-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+/* Individual dot */
+.banner-carousel-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ccc;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.banner-carousel-dot.active {
+    background-color: #fff;
 }

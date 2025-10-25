@@ -37,7 +37,8 @@ import BrandUpdate from "./component/BrandUpdate";
 import PagesAdmin from "./component/PagesAdmin";
 import ProductReview from "./component/ProductReview";
 import Feedback from "./component/Feedback";
-import TagPanel from "./component/TagPanel";
+import TagAssignmentPanel from "./component/TagAssignmentPanel";
+import TagManager from "./component/TagManager"
 import "./App.css";
 
 function Layout() {
@@ -85,7 +86,8 @@ function Layout() {
             <Route path="/category/update/:id" element={<CategoryUpdate />} />
 
             {/* Tag */}
-            <Route path="/tags" element={<TagPanel />} />
+            <Route path="/tags" element={<TagAssignmentPanel />} />
+            <Route path="/tag-manager" element={<TagManager />} />
 
             {/* voucher*/}
             <Route path="/voucher" element={<Voucher />} />
