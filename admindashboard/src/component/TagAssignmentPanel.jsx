@@ -1,39 +1,55 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import axios from "axios";
 import "../CSS/TagAssignmentPanel.css";
 
 function TagAssignmentPanel() {
+    // Data
     const [products, setProducts] = useState([]);
     const [tags, setTags] = useState([]);
-    const [selectedTag, setSelectedTag] = useState(""); // Will auto-select first tag
-    const [selectedProducts, setSelectedProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
+
+    // Filters
     const [search, setSearch] = useState("");
     const [category, setCategory] = useState("all");
     const [brand, setBrand] = useState("all");
     const [sort, setSort] = useState("asc");
-    const [categories, setCategories] = useState([]);
-    const [brands, setBrands] = useState([]);
-    const [showOnlyTagged, setShowOnlyTagged] = useState(false);
+    const [filterTag, setFilterTag] = useState(""); // chosen tag to filter by ("" = all)
+
+    // Tag assignment
+    const [assignTag, setAssignTag] = useState(""); // tag to assign/remove
+
+    // Selection
+    const [selectedProducts, setSelectedProducts] = useState([]);
     const masterCheckboxRef = useRef(null);
 
+    // Fetch static data
     useEffect(() => {
         axios.get("http://localhost:5000/api/tags").then(res => {
-            setTags(res.data);
-            if (res.data.length > 0) {
-                setSelectedTag(res.data[0].id.toString()); // ✅ Auto-select first tag
-            }
+            const list = Array.isArray(res.data) ? res.data : [];
+            setTags(list);
+            // Initialize assignTag to first available tag id if present
+            const firstId = list.length > 0 ? String(list[0].id) : null;
+            setAssignTag(firstId ?? "");
         });
-        axios.get("http://localhost:5000/api/category").then(res => setCategories(res.data));
-        axios.get("http://localhost:5000/api/brand").then(res => setBrands(res.data));
+        axios.get("http://localhost:5000/api/category").then(res => {
+            setCategories(Array.isArray(res.data) ? res.data : []);
+        });
+        axios.get("http://localhost:5000/api/brand").then(res => {
+            setBrands(Array.isArray(res.data) ? res.data : []);
+        });
     }, []);
 
+    // Fetch products whenever non-tag filters change
     const fetchProducts = () => {
         const params = { search, category, brand, sort };
         axios.get("http://localhost:5000/api/tags/products", { params })
             .then(res => {
-                setProducts(res.data);
-                const validIds = res.data.map(p => p.product_id);
-                setSelectedProducts(prev => prev.filter(id => validIds.includes(id)));
+                const list = Array.isArray(res.data) ? res.data : [];
+                setProducts(list);
+                // Keep only selected IDs that still exist
+                const validIds = new Set(list.map(p => p.product_id));
+                setSelectedProducts(prev => prev.filter(id => validIds.has(id)));
             });
     };
 
@@ -41,18 +57,28 @@ function TagAssignmentPanel() {
         fetchProducts();
     }, [search, category, brand, sort]);
 
+    // Client-side tag filtering
+    const filteredProducts = useMemo(() => {
+        if (!filterTag) return products;
+        return products.filter(p =>
+            Array.isArray(p.tags) &&
+            p.tags.some(tag => String(tag.id) === filterTag)
+        );
+    }, [products, filterTag]);
+
+    // Master checkbox state based on filtered rows only
     useEffect(() => {
-        if (masterCheckboxRef.current) {
-            const total = filteredProducts.length;
-            const selected = selectedProducts.filter(id =>
-                filteredProducts.some(p => p.product_id === id)
-            ).length;
+        const el = masterCheckboxRef.current;
+        if (!el) return;
+        const total = filteredProducts.length;
+        const selectedVisible = selectedProducts.filter(id =>
+            filteredProducts.some(p => p.product_id === id)
+        ).length;
+        el.indeterminate = selectedVisible > 0 && selectedVisible < total;
+        el.checked = total > 0 && selectedVisible === total;
+    }, [selectedProducts, filteredProducts]);
 
-            masterCheckboxRef.current.indeterminate = selected > 0 && selected < total;
-            masterCheckboxRef.current.checked = selected === total && total > 0;
-        }
-    }, [selectedProducts, products, showOnlyTagged]);
-
+    // Handlers
     const handleSearch = (e) => {
         setSearch(e.target.value);
         setCategory("all");
@@ -67,19 +93,23 @@ function TagAssignmentPanel() {
 
     const toggleSelectAll = () => {
         const visibleIds = filteredProducts.map(p => p.product_id);
-        const allSelected = visibleIds.every(id => selectedProducts.includes(id));
+        const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedProducts.includes(id));
 
         if (allSelected) {
+            // Unselect only the visible ones
             setSelectedProducts(prev => prev.filter(id => !visibleIds.includes(id)));
         } else {
-            const updated = Array.from(new Set([...selectedProducts, ...visibleIds]));
-            setSelectedProducts(updated);
+            // Add visible ones to current selection
+            const updated = new Set(selectedProducts);
+            visibleIds.forEach(id => updated.add(id));
+            setSelectedProducts(Array.from(updated));
         }
     };
 
     const handleAssignTag = () => {
+        if (!assignTag || selectedProducts.length === 0) return;
         axios.post("http://localhost:5000/api/tags/assign-multiple", {
-            tag_id: selectedTag,
+            tag_id: assignTag,
             product_ids: selectedProducts
         }).then(() => {
             alert("Tag assigned successfully");
@@ -88,9 +118,10 @@ function TagAssignmentPanel() {
     };
 
     const handleRemoveTag = () => {
+        if (!assignTag || selectedProducts.length === 0) return;
         axios.delete("http://localhost:5000/api/tags/remove-multiple", {
             data: {
-                tag_id: selectedTag,
+                tag_id: assignTag,
                 product_ids: selectedProducts
             }
         }).then(() => {
@@ -99,27 +130,8 @@ function TagAssignmentPanel() {
         });
     };
 
-    const getCategoryName = (id) => {
-        const match = categories.find(c => c.id === id || c.category_id === id);
-        return match?.name || "Unknown";
-    };
-
-    const getBrandName = (id) => {
-        const match = brands.find(b => b.id === id || b.brand_id === id);
-        return match?.name || "Unknown";
-    };
-
-    const toggleTagFilter = () => {
-        setShowOnlyTagged(prev => !prev);
-    };
-
-    const filteredProducts = showOnlyTagged
-        ? products.filter(p => p.tags && p.tags.length > 0)
-        : products;
-
-    const isActionDisabled = !selectedTag || selectedProducts.length === 0;
-
     const handleNukeTags = () => {
+        if (selectedProducts.length === 0) return;
         axios.delete("http://localhost:5000/api/tags/remove-all", {
             data: {
                 product_ids: selectedProducts
@@ -130,10 +142,23 @@ function TagAssignmentPanel() {
         });
     };
 
+    const getCategoryName = (id) => {
+        const match = categories.find(c => c.id === id || c.category_id === id);
+        return match?.name ?? "Unknown";
+    };
+
+    const getBrandName = (id) => {
+        const match = brands.find(b => b.id === id || b.brand_id === id);
+        return match?.name ?? "Unknown";
+    };
+
+    const isActionDisabled = !assignTag || selectedProducts.length === 0;
+
     return (
         <div>
             <h2>Tag Management Panel</h2>
 
+            {/* Filters row */}
             <div>
                 <input
                     type="text"
@@ -145,7 +170,7 @@ function TagAssignmentPanel() {
                 <select value={category} onChange={(e) => setCategory(e.target.value)}>
                     <option value="all">All Categories</option>
                     {categories.map(c => (
-                        <option key={c.id || c.category_id} value={c.id || c.category_id}>
+                        <option key={c.id ?? c.category_id} value={c.id ?? c.category_id}>
                             {c.name}
                         </option>
                     ))}
@@ -154,8 +179,18 @@ function TagAssignmentPanel() {
                 <select value={brand} onChange={(e) => setBrand(e.target.value)}>
                     <option value="all">All Brands</option>
                     {brands.map(b => (
-                        <option key={b.id || b.brand_id} value={b.id || b.brand_id}>
+                        <option key={b.id ?? b.brand_id} value={b.id ?? b.brand_id}>
                             {b.name}
+                        </option>
+                    ))}
+                </select>
+
+                {/* Tag filter dropdown */}
+                <select value={filterTag} onChange={(e) => setFilterTag(e.target.value)}>
+                    <option value="">All Tags</option>
+                    {tags.map(tag => (
+                        <option key={tag.id} value={String(tag.id)}>
+                            {tag.name}
                         </option>
                     ))}
                 </select>
@@ -166,11 +201,14 @@ function TagAssignmentPanel() {
                 </select>
             </div>
 
+            {/* Tag actions */}
             <div>
                 <label style={{ marginRight: "8px" }}>Set tag:</label>
-                <select value={selectedTag} onChange={(e) => setSelectedTag(e.target.value)}>
+                <select value={assignTag} onChange={(e) => setAssignTag(e.target.value)}>
                     {tags.map(tag => (
-                        <option key={tag.id} value={tag.id.toString()}>{tag.name}</option>
+                        <option key={tag.id} value={String(tag.id)}>
+                            {tag.name}
+                        </option>
                     ))}
                 </select>
 
@@ -182,9 +220,6 @@ function TagAssignmentPanel() {
                 </button>
                 <button onClick={handleNukeTags} disabled={selectedProducts.length === 0}>
                     Nuke All Tags
-                </button>
-                <button onClick={toggleTagFilter}>
-                    {showOnlyTagged ? "Show All Products" : "Show Only Tagged Products"}
                 </button>
             </div>
 
@@ -220,7 +255,7 @@ function TagAssignmentPanel() {
                             <td>{getCategoryName(p.category_id)}</td>
                             <td>{getBrandName(p.brand_id)}</td>
                             <td>
-                                {p.tags && p.tags.length > 0
+                                {Array.isArray(p.tags) && p.tags.length > 0
                                     ? p.tags.map(tag => tag.name).join(", ")
                                     : "—"}
                             </td>
@@ -228,11 +263,7 @@ function TagAssignmentPanel() {
                     ))}
                     {filteredProducts.length === 0 && (
                         <tr>
-                            <td colSpan="5">
-                                {showOnlyTagged
-                                    ? "No products with tags found."
-                                    : "No products found."}
-                            </td>
+                            <td colSpan="5">No products found.</td>
                         </tr>
                     )}
                 </tbody>

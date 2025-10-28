@@ -187,7 +187,8 @@ exports.getFilteredProducts = (req, res) => {
             p.name, 
             p.category_id, 
             p.brand_id,
-            GROUP_CONCAT(t.name SEPARATOR ', ') AS tag_names
+            GROUP_CONCAT(t.id) AS tag_ids,
+            GROUP_CONCAT(t.name) AS tag_names
         FROM products p
         LEFT JOIN product_tags pt ON p.product_id = pt.product_id
         LEFT JOIN tags t ON pt.tag_id = t.id
@@ -215,14 +216,27 @@ exports.getFilteredProducts = (req, res) => {
     db.query(sql, params, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        const formatted = results.map(p => ({
-            ...p,
-            tags: p.tag_names
-                ? p.tag_names.split(', ').map(name => ({ name }))
-                : []
-        }));
+        const formatted = results.map(p => {
+            let tags = [];
+            if (p.tag_ids && p.tag_names) {
+                const ids = p.tag_ids.split(",");
+                const names = p.tag_names.split(",");
+                tags = ids.map((id, idx) => ({
+                    id: parseInt(id, 10),
+                    name: names[idx]
+                }));
+            }
+            return {
+                product_id: p.product_id,
+                name: p.name,
+                category_id: p.category_id,
+                brand_id: p.brand_id,
+                tags
+            };
+        });
 
         res.status(200).json(formatted);
     });
 };
+
 
