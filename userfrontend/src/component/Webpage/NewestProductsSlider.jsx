@@ -6,13 +6,17 @@ import "../CSS/NewestProductsSlider.css";
 import { Link } from "react-router-dom";
 
 const NewestProductsSlider = ({ slug }) => {
-    const [products, setProducts] = useState([]);
-    const sliderRef = useRef(null);
+  const [products, setProducts] = useState([]);
+  const sliderRef = useRef(null);
 
     useEffect(() => {
-        fetch(`http://localhost:5000/api/products/category/${slug}/newest`)
+        if (!slug) return;
+        fetch(`http://localhost:5000/api/products/tag/2/category/${slug}`)
             .then(res => res.json())
-            .then(data => setProducts(data));
+            .then(data => {
+            console.log("API data:", data);
+            setProducts(Array.isArray(data) ? data : []);
+        });
     }, [slug]);
 
     const settings = {
@@ -48,7 +52,8 @@ const NewestProductsSlider = ({ slug }) => {
 
             <div className="newest-products-slider">
                 <Slider ref={sliderRef} {...settings}>
-                    {products.map(product => (
+
+                {Array.isArray(products) && products.map(product => (
                     <div key={product.product_id} className="newest-products-slide">
                         <Link to={`/product/${product.slug}`} className="newest-products-link">
                         <div className="newest-products-card">

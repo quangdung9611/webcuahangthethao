@@ -77,6 +77,29 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
   });
 };
 
+// Lấy sản phẩm theo tag + category (giới hạn 10 sản phẩm)
+exports.getProductsByTagAndCategory = (req, res) => {
+  const { tagId, categorySlug } = req.params;
+
+  const sql = `
+    SELECT p.*
+    FROM products p
+    JOIN product_tags pt ON p.product_id = pt.product_id
+    JOIN tags t ON pt.tag_id = t.id
+    JOIN categories c ON p.category_id = c.category_id
+    WHERE t.id = ? AND c.slug = ?
+    LIMIT 10
+  `.replace(/\s+/g, ' ').trim();
+
+  db.query(sql, [tagId, categorySlug], (err, results) => {
+    if (err) {
+      console.error("SQL error:", err);
+      return res.json([]); // always return an array
+    }
+    res.json(results || []);
+  });
+};
+
 // Lấy sản phẩm theo brand slug
 exports.getProductsByBrands = (req, res) => {
   const { slug } = req.params;

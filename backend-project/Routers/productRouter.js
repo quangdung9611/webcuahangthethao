@@ -18,22 +18,25 @@ router.get("/category/:slug", productController.getProductsByCategorySlug);
 // 4. Lấy sản phẩm mới nhất theo category slug
 router.get("/category/:slug/newest", productController.getNewestProductsByCategorySlug)
 
-// 4. Lấy sản phẩm theo brand slug
+// 5. Lấy sản phẩm mới theo tag và category
+router.get("/tag/:tagId/category/:categorySlug", productController.getProductsByTagAndCategory);
+
+// 6. Lấy sản phẩm theo brand slug
 router.get("/brand/:slug", productController.getProductsByBrands);
 
-// 5. Lấy sản phẩm theo category + brand
+// 7. Lấy sản phẩm theo category + brand
 router.get("/:categorySlug/:brandSlug", productController.getProductsByCategoryAndBrand);
 
-// 6. Lấy sản phẩm theo ID (đặt cuối)
+// 8. Lấy sản phẩm theo ID (đặt cuối)
 router.get("/:id", productController.getProductById);
 
-// 7. Tạo sản phẩm mới
+// 9. Tạo sản phẩm mới
 router.post("/", productController.uploadSingleImage, productController.createProduct);
 
-// 8. Cập nhật sản phẩm
+// 10. Cập nhật sản phẩm
 router.put("/:id", productController.uploadSingleImage, productController.updateProduct);
 
-// 9. Xóa sản phẩm
+// 11. Xóa sản phẩm
 router.delete("/:id", productController.deleteProduct);
 
 module.exports = router;
