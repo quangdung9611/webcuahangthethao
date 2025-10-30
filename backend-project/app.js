@@ -30,6 +30,8 @@ app.use('/images', express.static(path.join(__dirname, '/public/images')));
 // JSON Parser
 app.use(express.json());
 
+app.use(express.urlencoded({ extended: true }));
+
 // Route test
 app.get('/api', (req, res) => {
   res.send('Kết nối thành công');

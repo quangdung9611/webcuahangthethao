@@ -32,7 +32,8 @@ const BannerCarousel = () => {
             <Slider {...settings}>
                 {banners.map(banner => (
                     <div key={banner.id} className="banner-slide">
-                        <img src={banner.image} alt={banner.caption} className="banner-image" />
+                       <img src={banner.image} alt={banner.caption} className="banner-image" style={{ width: "100%" }} />
+
                         {/* <div className="banner-caption">{banner.caption}</div> */}
                         {/* Sử dụng div trên nếu muốn thêm caption cho banner */}
                     </div>

@@ -2,18 +2,34 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import JoditEditor from "jodit-react";
+import DOMPurify from "dompurify";
 
 import "../CSS/product.css";
 
 const variantSuggestions = {
-  "Áo Thun": { sizes: ["S", "M", "L", "XL", "XXL"], imagePerColor: false },
+  "Áo Cầu Lông": { sizes: ["S", "M", "L", "XL", "XXL"], imagePerColor: false },
   "Giày Cầu Lông": { sizes: ["38", "39", "40", "41", "42", "43", "44"], imagePerColor: true },
   "Vợt Cầu Lông": { sizes: ["3U", "4U"], imagePerColor: false },
+  "Vợt PickleBall": { sizes: ["3U", "4U"], imagePerColor: false },
+  "Vợt Tennis": { sizes: ["3U", "4U"], imagePerColor: false },
 };
 
-const colorPalette = ["Đen", "Trắng", "Đỏ", "Xanh", "Vàng", "Xám", "Xanh Navy", "Hồng", "Nâu", "Cam"];
-const labelOptions = ["Nổi bật", "Bán chạy", "Mới"];
-
+// Bảng màu chung
+const colorPalette = [
+  "Đen", "Trắng", "Đỏ", "Xanh", "Vàng", "Xám", "Xanh Navy", "Hồng", "Nâu", "Cam", "Tím",
+];
+function toSlug(str) {
+  str = str
+    .normalize("NFD") // tách ký tự + dấu
+    .replace(/[\u0300-\u036f]/g, "") // bỏ dấu
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // loại ký tự đặc biệt
+    .trim()
+    .replace(/\s+/g, "-") // khoảng trắng → "-"
+    .toLowerCase();
+  return str;
+}
 function ProductAdd() {
   const navigate = useNavigate();
   const editor = useRef(null);
@@ -26,6 +42,7 @@ function ProductAdd() {
     description: "",
     price: "",
   });
+
   const [file, setFile] = useState(null);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -36,7 +53,6 @@ function ProductAdd() {
   const [colorFiles, setColorFiles] = useState({});
   const [imagePerColor, setImagePerColor] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState([]);
-  const [editorContent, setEditorContent] = useState("");
 
   useEffect(() => {
     axios.get("http://localhost:5000/api/category").then(res => setCategories(res.data));
@@ -45,23 +61,18 @@ function ProductAdd() {
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    if (name === "name") {
-      const generatedSlug = value.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "");
+
+      if (name === "name") {
+      const generatedSlug = toSlug(value); // dùng hàm mới
       setProductData(prev => ({ ...prev, name: value, slug: generatedSlug }));
+    } else if (name === "price") {
+      // Loại bỏ dấu phân cách, lưu số nguyên
+      const numericValue = parseInt(value.toString().replace(/\./g, ""), 10) || 0;
+      setProductData(prev => ({ ...prev, price: numericValue }));
     } else {
       setProductData(prev => ({ ...prev, [name]: value }));
     }
   }, []);
-
-  const stripHtml = (html) => {
-    const div = document.createElement("div");
-    div.innerHTML = html;
-    return div.textContent || div.innerText || "";
-  };
-
-  useEffect(() => {
-    setProductData(prev => ({ ...prev, description: stripHtml(editorContent) }));
-  }, [editorContent]);
 
   useEffect(() => {
     if (!productData.category_id) return;
@@ -84,10 +95,6 @@ function ProductAdd() {
     }
   };
 
-  const toggleLabel = (label) => {
-    setSelectedLabels(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
-  };
-
   const handleStockChange = (size, color, value) => {
     const key = `${size}-${color}`;
     setStockMap(prev => ({ ...prev, [key]: parseInt(value) || 0 }));
@@ -98,60 +105,76 @@ function ProductAdd() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const { category_id, brand_id, name, slug, price } = productData;
-    if (!category_id || !brand_id || !name || !slug || !price || !file) {
-      alert("Vui lòng nhập đầy đủ thông tin sản phẩm!");
-      return;
-    }
+  e.preventDefault();
+  const { category_id, brand_id, name, slug, price, description } = productData;
+  if (!category_id || !brand_id || !name || !slug || !price || !file) {
+    alert("Vui lòng nhập đầy đủ thông tin sản phẩm!");
+    return;
+  }
 
-    try {
-      // Gửi dữ liệu sản phẩm (KHÔNG MÃ HÓA)
-      const data = new FormData();
-      Object.entries(productData).forEach(([key, value]) => {
+  try {
+    const data = new FormData();
+
+    Object.entries(productData).forEach(([key, value]) => {
+      if (key === "description") {
+        // Loại bỏ thẻ không mong muốn, chỉ giữ cơ bản
+        const cleanDesc = DOMPurify.sanitize(value, {
+          ALLOWED_TAGS: ["p", "ul", "ol", "li", "a", "br", "img"],
+          ALLOWED_ATTR: ["href", "target", "src", "alt"],
+        });
+        const finalDesc = cleanDesc.replace(/<\/?(b|u|span|strong|i)[^>]*>/g, "");
+        data.append("description", finalDesc);
+      } else if (key === "price") {
+        // Ép kiểu nguyên, tránh ±1 đơn vị
+        const numPrice = Math.round(Number(value));
+        data.append("price", !isNaN(numPrice) && numPrice >= 0 ? numPrice : 0);
+      } else {
         data.append(key, value);
-      });
-      data.append("image", file);
-
-      const res = await axios.post("http://localhost:5000/api/products", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const product_id = res.data.product_id;
-
-      const variantsArray = [];
-      selectedSizes.forEach(size => {
-        selectedColors.forEach(color => {
-          const key = `${size}-${color}`;
-          const stockValue = stockMap[key] !== undefined ? stockMap[key] : 0;
-          variantsArray.push({
-            size,
-            color,
-            stock: stockValue,
-            image: imagePerColor ? colorFiles[color]?.name || null : null,
-          });
-        });
-      });
-
-      const variantData = new FormData();
-      variantData.append("product_id", product_id);
-      variantData.append("variants", JSON.stringify(variantsArray));
-      if (imagePerColor) {
-        Object.keys(colorFiles).forEach(color => {
-          if (colorFiles[color]) variantData.append(`colorFile-${color}`, colorFiles[color]);
-        });
       }
+    });
 
-      await axios.post("http://localhost:5000/api/product-materials", variantData, {
-        headers: { "Content-Type": "multipart/form-data" },
+    data.append("image", file);
+
+    const res = await axios.post("http://localhost:5000/api/products", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    const product_id = res.data.product_id;
+
+    const variantsArray = [];
+    selectedSizes.forEach(size => {
+      selectedColors.forEach(color => {
+        const key = `${size}-${color}`;
+        const stockValue = Math.round(stockMap[key]) || 0;
+        variantsArray.push({
+          size,
+          color,
+          stock: stockValue,
+          image: imagePerColor ? colorFiles[color]?.name || null : null,
+        });
       });
+    });
 
-      alert("Tạo sản phẩm và thêm biến thể thành công!");
-      navigate("/product");
-    } catch (err) {
-      console.error(err);
-      alert("Lỗi server khi tạo sản phẩm hoặc thêm biến thể");
+    const variantData = new FormData();
+    variantData.append("product_id", product_id);
+    variantData.append("variants", JSON.stringify(variantsArray));
+
+    if (imagePerColor) {
+      Object.keys(colorFiles).forEach(color => {
+        if (colorFiles[color]) variantData.append(`colorFile-${color}`, colorFiles[color]);
+      });
     }
-  };
+
+    await axios.post("http://localhost:5000/api/product-materials", variantData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    alert("Tạo sản phẩm và thêm biến thể thành công!");
+    navigate("/product");
+  } catch (err) {
+    console.error(err);
+    alert("Lỗi server khi tạo sản phẩm hoặc thêm biến thể");
+  }
+};
 
   return (
     <div className="form-container">
@@ -206,37 +229,53 @@ function ProductAdd() {
           disabled
         />
 
-        <label>Mô tả</label>
-        <JoditEditor
-          ref={editor}
-          value={editorContent}
-          onChange={setEditorContent}
-          config={{
-            readonly: false,
-            height: 200,
-            toolbarSticky: false,
-            buttons:
-              "bold,italic,underline,strikethrough,|,ul,ol,|,link,image,table,|,source",
-            showCharsCounter: true,
-            showWordsCounter: true,
-            showXPathInStatusbar: false,
-          }}
-        />
+        <label>Mô tả sản phẩm *</label>
+                <JoditEditor
+              ref={editor}
+              value={productData.description}
+              onBlur={(newContent) => {
+                // chỉ cập nhật khi rời khỏi editor
+                setProductData((prev) => ({ ...prev, description: newContent }));
+              }}
+              config={{
+                readonly: false,
+                height: 300,
+                toolbarSticky: false,
+                buttons:
+                  "ul,ol,|,left,center,right,justify,|,link,image,table,|,source",
+                showCharsCounter: true,
+                showWordsCounter: true,
+                showXPathInStatusbar: false,
+                // ✅ Làm sạch nội dung khi dán (không copy style, màu, font, in đậm)
+                cleanHTML: {
+                  cleanOnPaste: true,
+                  replaceNBSP: true,
+                  removeEmptyElements: true,
+                  removeTags: ["style", "script", "b", "strong", "u", "i"],
+                },
+                askBeforePasteHTML: false,
+                askBeforePasteFromWord: false,
+                disablePlugins: ["pasteStorage"],
+                pasteHTMLAction: "insert_clear",
+                processPasteHTML: true,
+                processPasteFromWord: true,
+              }}
+            />
 
-        <label>Giá *</label>
-        <input
-          type="number"
-          name="price"
-          value={productData.price}
-          onChange={handleChange}
-          required
-        />
+            <label>Giá *</label>
+             <input
+                type="text"
+                name="price"
+                value={productData.price.toLocaleString("vi-VN")}
+                onChange={handleChange}
+                required
+              />
 
         <label>Hình ảnh chính *</label>
-        <input 
-          type="file" 
-          onChange={(e) => setFile(e.target.files[0])} 
-          required 
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files[0])}
+          required
         />
 
         {sizes.length > 0 && (
@@ -325,23 +364,6 @@ function ProductAdd() {
             )}
           </div>
         )}
-
-        {/* ===== Nhãn sản phẩm ===== */}
-        <div style={{ marginTop: "20px" }}>
-          <label>Nhãn sản phẩm:</label>
-          <div className="button-group">
-            {labelOptions.map((label) => (
-              <button
-                type="button"
-                key={label}
-                className={selectedLabels.includes(label) ? "active" : ""}
-                onClick={() => toggleLabel(label)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <button type="submit" style={{ marginTop: "20px" }}>
           Thêm sản phẩm & biến thể

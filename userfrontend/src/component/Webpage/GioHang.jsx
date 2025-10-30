@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-
+import "../CSS/giohang.css";
 function GioHang() {
   const [cart, setCart] = useState([]);
 
@@ -15,6 +15,7 @@ function GioHang() {
     newCart[index].quantity = Number(value);
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event('cartUpdated')); // ✅ Thông báo cho Header
   };
 
   const handleRemove = (index) => {
@@ -22,6 +23,7 @@ function GioHang() {
     newCart.splice(index, 1);
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event('cartUpdated')); 
   };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -51,7 +53,7 @@ function GioHang() {
                     <img
                       src={`http://localhost:5000/images/${item.image}`}
                       alt={item.name}
-                      width="150px"
+                      width="200px"
                     />
                   </td>
                   <td>
@@ -61,13 +63,25 @@ function GioHang() {
                   </td>
                   <td>{item.price.toLocaleString()} VNĐ</td>
                   <td>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => handleQuantityChange(idx, e.target.value)}
-                      disabled={item.voucherApplied}
-                    />
+                  <div className="quantity-control">
+                      <button
+                        className="quantity-btn"
+                        onClick={() => handleQuantityChange(idx, item.quantity - 1)}
+                        disabled={item.quantity <= 1 || item.voucherApplied}
+                      >
+                        −
+                      </button>
+                      <span className="quantity-value">{item.quantity}</span>
+                      <button
+                        className="quantity-btn"
+                        onClick={() => handleQuantityChange(idx, item.quantity + 1)}
+                        disabled={item.voucherApplied}
+                      >
+                        +
+                      </button>
+                    </div>
+
+
                   </td>
                   <td>{(item.price * item.quantity).toLocaleString()} VNĐ</td>
                   <td>

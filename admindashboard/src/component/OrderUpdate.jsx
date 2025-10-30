@@ -138,16 +138,29 @@ const OrderUpdate = () => {
 
           <label>Trạng thái đơn hàng:</label>
           <select
-            name="status"
-            value={order.status}
-            onChange={handleOrderChange}
-          >
-            <option value="pending">Chờ xác nhận</option>
-            <option value="paid">Đã thanh toán</option>
-            <option value="shipping">Đang giao</option>
-            <option value="completed">Hoàn thành</option>
-            <option value="canceled">Đã hủy</option>
-          </select>
+  name="status"
+  value={order.status}
+  onChange={handleOrderChange}
+>
+  {[
+    { value: "pending", label: "Chờ xác nhận" },
+    { value: "paid", label: "Đã thanh toán" },
+    { value: "shipping", label: "Đang giao" },
+    { value: "completed", label: "Hoàn thành" },
+    { value: "canceled", label: "Đã hủy" },
+  ]
+    .filter((option) => {
+      const orderFlow = ["pending", "paid", "shipping", "completed", "canceled"];
+      const currentIndex = orderFlow.indexOf(order.status);
+      const optionIndex = orderFlow.indexOf(option.value);
+      return optionIndex >= currentIndex;
+    })
+    .map((option) => (
+      <option key={option.value} value={option.value}>
+        {option.label}
+      </option>
+    ))}
+</select>
         </div>
 
         {/* 🛍 Danh sách sản phẩm */}

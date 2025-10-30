@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { colorMap } from "./ColorMap";
+import DOMPurify from "dompurify";
 import "../CSS/trangchitiet.css";
 
 
@@ -45,7 +46,8 @@ function ProductDetail() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
   const [reviews, setReviews] = useState([]);
-
+  const [formErrors, setFormErrors] = useState({});
+  const [notification, setNotification] = useState({ show: false, message: "", type: "success" });
   const [showPreOrderForm, setShowPreOrderForm] = useState(false);
   const [preOrderData, setPreOrderData] = useState({
     name: "",
@@ -272,60 +274,86 @@ function ProductDetail() {
     cart.push(cartItem);
   }
 
-  localStorage.setItem("cart", JSON.stringify(cart));
-  navigate("/giohang");
+ localStorage.setItem("cart", JSON.stringify(cart));
+window.dispatchEvent(new Event('cartUpdated')); // ✅ Cập nhật header
+navigate("/giohang");
+
 };
 
 
   // ========================================
-  // 📦 Đặt hàng trước
+  //  Đặt hàng trước
   // ========================================
   const handlePreOrder = () => {
     setShowPreOrderForm(true);
   };
 
   const handlePreOrderSubmit = async (e) => {
-    e.preventDefault();
-    setPreOrderLoading(true);
-    try {
-      const price = getBestFlashSale(product)
-        ? getBestFlashSale(product).sale_price
-        : Number(product.price);
+  e.preventDefault();
+  setPreOrderLoading(true);
 
-      const total = price * quantity;
+  const errors = {};
+if (!preOrderData.name.trim()) errors.name = "Vui lòng nhập họ tên";
+if (!preOrderData.phone.trim()) errors.phone = "Vui lòng nhập số điện thoại";
+if (!preOrderData.address.trim()) errors.address = "Vui lòng nhập địa chỉ";
 
-      const fullProductName = `${product.name}${selectedSize ? " - " + selectedSize : ""}${selectedColor ? " - " + selectedColor : ""}`;
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    setPreOrderLoading(false);
+    return;
+  }
 
-      const res = await fetch("http://localhost:5000/api/preorders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: product.product_id,
-          product_name: fullProductName,
-          price,
-          quantity,
-          total_amount: total,
-          color: selectedColor || null,
-          size: selectedSize || null,
-          customer_name: preOrderData.name,
-          phone: preOrderData.phone,
-          address: preOrderData.address,
-          note: preOrderData.note,
-        }),
-      });
+  setFormErrors({});
+  try {
+    const price = getBestFlashSale(product)
+      ? getBestFlashSale(product).sale_price
+      : Number(product.price);
+    const total = price * quantity;
+    const fullProductName = `${product.name}${
+      selectedSize ? " - " + selectedSize : ""
+    }${selectedColor ? " - " + selectedColor : ""}`;
 
-      if (!res.ok) throw new Error("Đặt hàng trước thất bại!");
-      const data = await res.json();
-      alert("📦 Đặt hàng trước thành công! Mã đơn #" + data.preorder_id);
-      setShowPreOrderForm(false);
-      setPreOrderData({ name: "", phone: "", address: "", note: "" });
-      setQuantity(1);
-    } catch (err) {
-      alert("Lỗi: " + err.message);
-    } finally {
-      setPreOrderLoading(false);
-    }
-  };
+    const res = await fetch("http://localhost:5000/api/preorders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: product.product_id,
+        product_name: fullProductName,
+        price,
+        quantity,
+        total_amount: total,
+        color: selectedColor || null,
+        size: selectedSize || null,
+        customer_name: preOrderData.name,
+        phone: preOrderData.phone,
+        address: preOrderData.address,
+        note: preOrderData.note,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Đặt hàng trước thất bại!");
+    const data = await res.json();
+
+    setNotification({
+      show: true,
+      message: "Đặt hàng trước thành công! Mã đơn #" + data.preorder_id,
+      type: "success",
+    });
+
+    setShowPreOrderForm(false);
+    setPreOrderData({ name: "", phone: "", address: "", note: "" });
+    setQuantity(1);
+  } catch (err) {
+    setNotification({
+      show: true,
+      message: "Lỗi: " + err.message,
+      type: "error",
+    });
+  } finally {
+    setPreOrderLoading(false);
+  }
+};
+
 
   // ========================================
   // ✍️ Đánh giá sản phẩm
@@ -345,40 +373,60 @@ function ProductDetail() {
     if (product) fetchReviews();
   }, [product]);
 
-  const handleSubmitReview = async () => {
-    if (reviewRating === 0) {
-      alert("Vui lòng chọn số sao!");
-      return;
-    }
-    if (!reviewComment.trim()) {
-      alert("Vui lòng nhập bình luận!");
-      return;
-    }
+ const handleSubmitReview = async () => {
+  const errors = {};
 
-    try {
-      const res = await fetch("http://localhost:5000/api/product-review", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: userId, // 👈 Quan trọng
-          product_id: product.product_id,
-          rating: reviewRating,
-          comment: reviewComment,
-          // user_id: localStorage.getItem("user_id") || 1
-        }),
-      });
+  // ⚠️ Kiểm tra lỗi
+  if (reviewRating === 0) {
+    errors.rating = "Vui lòng chọn số sao!";
+  }
+  if (!reviewComment.trim()) {
+    errors.comment = "Vui lòng nhập bình luận!";
+  }
 
-      if (!res.ok) throw new Error("Gửi đánh giá thất bại!");
-      alert("✅ Cảm ơn bạn đã đánh giá sản phẩm!");
+  // Nếu có lỗi -> set lỗi và dừng lại
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    return;
+  }
 
-      setModalIsOpen(false);
-      setReviewRating(0);
-      setReviewComment("");
-      fetchReviews();
-    } catch (err) {
-      alert("Lỗi: " + err.message);
-    }
-  };
+  try {
+    const res = await fetch("http://localhost:5000/api/product-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: userId,
+        product_id: product.product_id,
+        rating: reviewRating,
+        comment: reviewComment,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Gửi đánh giá thất bại!");
+
+    // ✅ Hiển thị thông báo thành công
+    setNotification({
+      show: true,
+      message: "Cảm ơn bạn đã đánh giá sản phẩm!",
+      type: "success",
+    });
+
+    // Reset form
+    setFormErrors({});
+    setModalIsOpen(false);
+    setReviewRating(0);
+    setReviewComment("");
+    fetchReviews();
+  } catch (err) {
+    // ❌ Hiển thị lỗi server
+    setNotification({
+      show: true,
+      message: "Lỗi: " + err.message,
+      type: "error",
+    });
+  }
+};
+
 
   if (loading) return <p>Đang tải dữ liệu...</p>;
   if (!product) return <p>Không tìm thấy sản phẩm</p>;
@@ -414,11 +462,6 @@ function ProductDetail() {
       </p>
 
           {isFlashActive && <p className="countdown">Còn lại: {formatTime(timer)}</p>}
-
-          <div
-            className="product-description"
-            dangerouslySetInnerHTML={{ __html: product.description }}
-          ></div>
 
           {/* Màu sắc */}
           {product.availableColors?.length > 0 && (
@@ -480,7 +523,7 @@ function ProductDetail() {
              Đặt hàng trước
             </button>
           )}
-
+     
           {/* Nút đánh giá sản phẩm */}
           <button
             onClick={() => setModalIsOpen(true)}
@@ -491,105 +534,145 @@ function ProductDetail() {
           </button>
         </div>
       </div>
+      <div
+        className="product-description"
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(product.description || "", {
+            ALLOWED_TAGS: ["p", "ul", "ol", "li", "a", "br"], // ❌ bỏ b, i, strong, em, u
+            ALLOWED_ATTR: ["href", "target"], // chỉ cho phép link cơ bản
+          }),
+        }}
+      ></div>
 
-      {/* 📝 Form Preorder Popup */}
-      {showPreOrderForm && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>
-              Đặt hàng trước: {product.name}
-              {selectedColor && ` - ${selectedColor}`}
-              {selectedSize && ` - ${selectedSize}`}
-            </h3>
-            <form onSubmit={handlePreOrderSubmit}>
-              <label>Họ tên *</label>
-              <input
-                type="text"
-                required
-                value={preOrderData.name}
-                onChange={(e) =>
-                  setPreOrderData({ ...preOrderData, name: e.target.value })
-                }
-              />
+ {/* 📝 Form Preorder Popup */}
+{showPreOrderForm && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <h3>
+        Đặt hàng trước: {product.name}
+        {selectedColor && ` - ${selectedColor}`}
+        {selectedSize && ` - ${selectedSize}`}
+      </h3>
 
-              <label>Số điện thoại *</label>
-              <input
-                type="text"
-                required
-                value={preOrderData.phone}
-                onChange={(e) =>
-                  setPreOrderData({ ...preOrderData, phone: e.target.value })
-                }
-              />
+      <form onSubmit={handlePreOrderSubmit}>
+        {/* Họ tên */}
+        <label>Họ tên *</label>
+        <input
+          type="text"
+          value={preOrderData.name}
+          onChange={(e) =>
+            setPreOrderData({ ...preOrderData, name: e.target.value })
+          }
+          className={formErrors.name ? "input-error-field" : ""}
+        />
+        {formErrors.name && (
+          <p className="form-error-text">{formErrors.name}</p>
+        )}
 
-              <label>Địa chỉ</label>
-              <textarea
-                value={preOrderData.address}
-                onChange={(e) =>
-                  setPreOrderData({ ...preOrderData, address: e.target.value })
-                }
-              />
+        {/* Số điện thoại */}
+        <label>Số điện thoại *</label>
+        <input
+          type="text"
+          value={preOrderData.phone}
+          onChange={(e) =>
+            setPreOrderData({ ...preOrderData, phone: e.target.value })
+          }
+          className={formErrors.phone ? "input-error-field" : ""}
+        />
+        {formErrors.phone && (
+          <p className="form-error-text">{formErrors.phone}</p>
+        )}
 
-              <label>Ghi chú</label>
-              <textarea
-                value={preOrderData.note}
-                onChange={(e) =>
-                  setPreOrderData({ ...preOrderData, note: e.target.value })
-                }
-              />
+        {/* Địa chỉ */}
+        <label>Địa chỉ *</label>
+        <textarea
+          value={preOrderData.address}
+          onChange={(e) =>
+            setPreOrderData({ ...preOrderData, address: e.target.value })
+          }
+          className={formErrors.address ? "input-error-field" : ""}
+        />
+        {formErrors.address && (
+          <p className="form-error-text">{formErrors.address}</p>
+        )}
 
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowPreOrderForm(false)}>
-                   Hủy
-                </button>
-                <button type="submit" disabled={preOrderLoading}>
-                  {preOrderLoading ? "Đang gửi..." : " Gửi đặt hàng"}
-                </button>
-              </div>
-            </form>
-          </div>
+        {/* Ghi chú */}
+        <label>Ghi chú</label>
+        <textarea
+          value={preOrderData.note}
+          onChange={(e) =>
+            setPreOrderData({ ...preOrderData, note: e.target.value })
+          }
+        />
+
+        <div className="modal-actions">
+          <button
+            type="button"
+            onClick={() => setShowPreOrderForm(false)}
+          >
+            Hủy
+          </button>
+          <button type="submit" disabled={preOrderLoading}>
+            {preOrderLoading ? "Đang gửi..." : "Gửi đặt hàng"}
+          </button>
         </div>
-      )}
+      </form>
+    </div>
+  </div>
+)}
 
-      {/* ✍️ Modal đánh giá sản phẩm */}
-      {modalIsOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Đánh giá sản phẩm: {product.name}</h3>
+ {/* ✍️ Modal đánh giá sản phẩm */}
+{modalIsOpen && (
+  <div className="modal-overlay">
+    <div className="modal-content">
+      <h3>Đánh giá sản phẩm: {product.name}</h3>
 
-            <label>Chọn số sao:</label>
-            <div className="rating-stars">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <span
-                  key={star}
-                  className={`star ${reviewRating >= star ? "active" : ""}`}
-                  onClick={() => setReviewRating(star)}
-                  style={{
-                    cursor: "pointer",
-                    fontSize: "24px",
-                    color: reviewRating >= star ? "#FFD700" : "#ccc",
-                  }}
-                >
-                  ★
-                </span>
-              ))}
-            </div>
-
-            <label>Bình luận của bạn:</label>
-            <textarea
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
-              placeholder="Nhập đánh giá..."
-              required
-            />
-
-            <div className="modal-actions">
-              <button onClick={() => setModalIsOpen(false)}>❌ Hủy</button>
-              <button onClick={handleSubmitReview}>📩 Gửi đánh giá</button>
-            </div>
-          </div>
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmitReview(); }}>
+        {/* ⭐ Chọn số sao */}
+        <label>Chọn số sao *</label>
+        <div className="rating-stars">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <span
+              key={star}
+              className={`star ${reviewRating >= star ? "active" : ""}`}
+              onClick={() => setReviewRating(star)}
+              style={{
+                cursor: "pointer",
+                fontSize: "24px",
+                color: reviewRating >= star ? "#FFD700" : "#ccc",
+              }}
+            >
+              ★
+            </span>
+          ))}
         </div>
-      )}
+        {formErrors.rating && (
+          <p className="input-error-text">{formErrors.rating}</p>
+        )}
+
+        {/* 📝 Bình luận */}
+        <label>Bình luận của bạn *</label>
+        <textarea
+          value={reviewComment}
+          onChange={(e) => setReviewComment(e.target.value)}
+          placeholder="Nhập đánh giá..."
+          className={formErrors.comment ? "input-error-field" : ""}
+        />
+        {formErrors.comment && (
+          <p className="input-error-text">{formErrors.comment}</p>
+        )}
+
+        {/* 🎯 Nút hành động */}
+        <div className="modal-actions">
+          <button type="button" onClick={() => setModalIsOpen(false)}>
+            Hủy
+          </button>
+          <button type="submit">Gửi đánh giá</button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
       {/* 📢 Danh sách đánh giá */}
       <div className="reviews-section">
@@ -607,6 +690,17 @@ function ProductDetail() {
           <p>Chưa có đánh giá nào cho sản phẩm này.</p>
         )}
       </div>
+      {notification.show && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3>{notification.type === "success" ? "✅ Thành công" : "❌ Lỗi"}</h3>
+            <p>{notification.message}</p>
+            <div className="modal-actions">
+              <button onClick={() => setNotification({ ...notification, show: false })}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

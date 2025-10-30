@@ -10,6 +10,8 @@ import ProductAdd from "./component/ProductAdd";
 import ProductUpdate from "./component/ProductUpdate";
 import ProductMaterials from "./component/ProductMaterial";
 import ProductMaterialAdd from "./component/ProductMaterialAdd";
+import Preorder from "./component/Preorder";
+import PreorderUpdate from "./component/PreorderUpdate";
 import AdminLogin from "./component/AdminLogin";
 import Category from "./component/Category";
 import CategoryAdd from "./component/CategoryAdd";
@@ -35,6 +37,8 @@ import Brand from "./component/Brand";
 import BrandAdd from "./component/BrandAdd";
 import BrandUpdate from "./component/BrandUpdate";
 import PagesAdmin from "./component/PagesAdmin";
+import PagesAdminAdd from "./component/PagesAdminAdd";
+import PagesAdminUpdate from "./component/PagesAdminUpdate";
 import ProductReview from "./component/ProductReview";
 import Feedback from "./component/Feedback";
 import "./App.css";
@@ -74,6 +78,10 @@ function Layout() {
             <Route path="/product-material" element={<ProductMaterials />} />
             <Route path="/product-material/add" element={<ProductMaterialAdd />} />
             {/* <Route path="/product/update/:id" element={<ProductUpdate />} /> */}
+
+             {/* Preorder */}
+            <Route path="/preorder" element={<Preorder />} />
+            <Route path="/preorder/update/:id" element={<PreorderUpdate />} />
             {/* Brand */}
             <Route path="/brand" element={<Brand />} />
             <Route path="/brand/add" element={<BrandAdd />} />
@@ -113,8 +121,10 @@ function Layout() {
             
             <Route path="/product-reviews" element={<ProductReview/>} />
             <Route path="/Feedback" element={<Feedback/>} />
+
             <Route path="/pages" element={<PagesAdmin/>} />
-            
+            <Route path="/pages/add" element={<PagesAdminAdd/>} />
+            <Route path="/pages/update/:id" element={<PagesAdminUpdate/>} />
           </Routes>
         </div>
       </div>

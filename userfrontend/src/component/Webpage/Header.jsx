@@ -27,6 +27,8 @@ export default function Header() {
   const [allProducts, setAllProducts] = useState([]);
   const [menuData, setMenuData] = useState([]); // ✅ thêm state này để tránh lỗi .map
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+const [aboutPage, setAboutPage] = useState(null);
 
   const navigate = useNavigate();
   const searchRef = useRef(null);
@@ -49,7 +51,13 @@ export default function Header() {
       .then((data) => setAllProducts(data))
       .catch((err) => console.error('Lỗi lấy sản phẩm:', err));
   }, []);
-
+  // ✅ Lấy slug trang giới thiệu
+  useEffect(() => {
+  fetch("http://localhost:5000/api/pages/gioi-thieu")
+    .then((res) => res.json())
+    .then((data) => setAboutPage(data))
+    .catch((err) => console.error("Lỗi tải trang giới thiệu:", err));
+}, []);
   // ✅ Lấy danh mục + thương hiệu cho menu
   useEffect(() => {
     fetch('http://localhost:5000/api/products/menu/categories-brands')
@@ -75,7 +83,11 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
+  useEffect(() => {
+  updateCartCount();
+  window.addEventListener('cartUpdated', updateCartCount);
+  return () => window.removeEventListener('cartUpdated', updateCartCount);
+}, []);
   // ✅ Hàm lọc gợi ý
   const handleSuggest = useCallback(
     (query) => {
@@ -103,6 +115,11 @@ export default function Header() {
     setShowSuggestions(true);
     debouncedSuggest(value);
   };
+  const updateCartCount = () => {
+  const cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const total = cart.reduce((sum, item) => sum + item.quantity, 0);
+  setCartCount(total);
+};
 
   // ✅ Khi submit tìm kiếm
   const handleSearchSubmit = (e) => {
@@ -149,9 +166,12 @@ export default function Header() {
 
             {/* MENU */}
             <nav className="nav">
-              <div className="dropdown">
-                <Link to="/news/ve-chung-toi">Về Chúng Tôi</Link>
-              </div>
+             {aboutPage && (
+                <div className="dropdown">
+                  <Link to={`/pages/${aboutPage.slug}`}>{aboutPage.title}</Link>
+                </div>
+              )}
+
 
               {/* ✅ Menu động (Category + Brand) */}
             {menuData.length > 0 && menuData.map((category) => (
@@ -193,7 +213,15 @@ export default function Header() {
                     onFocus={() => searchTerm.length > 0 && handleSuggest(searchTerm)}
                   />
                   <button type="submit">
-                    <i className="fa-solid fa-magnifying-glass"></i>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 451 451" className="svg-ico-search">
+                        <g>
+                          <path d="M447.05,428l-109.6-109.6c29.4-33.8,47.2-77.9,47.2-126.1C384.65,86.2,298.35,0,192.35,0C86.25,0,0.05,86.3,0.05,192.3
+                            s86.3,192.3,192.3,192.3c48.2,0,92.3-17.8,126.1-47.2L428.05,447c2.6,2.6,6.1,4,9.5,4s6.9-1.3,9.5-4
+                            C452.25,441.8,452.25,433.2,447.05,428z M26.95,192.3c0-91.2,74.2-165.3,165.3-165.3c91.2,0,165.3,74.2,165.3,165.3
+                            s-74.1,165.4-165.3,165.4C101.15,357.7,26.95,283.5,26.95,192.3z" />
+                        </g>
+                      </svg>
+
                   </button>
                 </form>
 
@@ -248,7 +276,8 @@ export default function Header() {
                   <path d="M6 6h15l-1.5 9h-12L6 6z" />
                   <path d="M6 6L4 3" />
                 </svg>
-                <span className="badge-count">0</span>
+               <span className="badge-count">{cartCount}</span>
+
               </Link>
             </div>
           </div>

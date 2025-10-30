@@ -48,7 +48,7 @@ function App() {
                 <Route path="news/category/:slug" element={<News />} />
               {/* Chi tiết từng bài viết dựa trên slug */}
                 <Route path="news/:slug" element={<NewsDetail />} />
-                <Route path="/news/:slug" element={<AboutUs />} />
+                <Route path="/pages/:slug" element={<AboutUs />} />
                 <Route path="/order-success/:id" element={<OrderSuccess />} />
             </Routes>
             <Footer />

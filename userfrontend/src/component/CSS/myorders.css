@@ -72,7 +72,8 @@
 
 .product-quantity,
 .product-price {
-  color: #555;
+  color: red;
+  font-weight: bolder;
 }
 
 /* Tổng tiền */

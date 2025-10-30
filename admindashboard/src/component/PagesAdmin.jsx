@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../CSS/user.css";
 
 const PagesAdmin = () => {
   const [pagesList, setPagesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
-  // Hàm fetch pages từ API
   const fetchPages = () => {
     setLoading(true);
     fetch("http://localhost:5000/api/pages")
@@ -26,7 +27,6 @@ const PagesAdmin = () => {
     fetchPages();
   }, []);
 
-  // Hàm xóa page
   const handleDelete = (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa trang này?")) return;
 
@@ -45,10 +45,7 @@ const PagesAdmin = () => {
 
   return (
     <div className="user-list">
-      <button
-        className="edit-btn"
-        onClick={() => (window.location.href = "/pages/add/")}
-      >
+      <button className="edit-btn" onClick={() => navigate("/pages/add")}>
         Thêm Page
       </button>
 
@@ -61,7 +58,7 @@ const PagesAdmin = () => {
             <th>Slug</th>
             <th>Tiêu đề</th>
             <th>Ngày tạo</th>
-            <th>Ngày cập nhật</th>
+            <th>Hình ảnh</th>
             <th>Hành động</th>
           </tr>
         </thead>
@@ -78,16 +75,20 @@ const PagesAdmin = () => {
                     : "—"}
                 </td>
                 <td>
-                  {page.updated_at
-                    ? new Date(page.updated_at).toLocaleDateString()
-                    : "—"}
+                  {page.image ? (
+                    <img
+                      src={`http://localhost:5000/images/pages/${page.image}`}
+                      alt="Ảnh"
+                      style={{ width: "200px", height: "auto", objectFit: "cover" }}
+                    />
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>
                   <button
                     className="edit-btn"
-                    onClick={() =>
-                      (window.location.href = `/pages/update/${page.page_id}`)
-                    }
+                    onClick={() => navigate(`/pages/update/${page.page_id}`)}
                   >
                     Sửa
                   </button>

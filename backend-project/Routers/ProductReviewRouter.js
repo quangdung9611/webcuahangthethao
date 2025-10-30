@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const ProductReviewController = require('../Controllers/ProductReviewsControllers');
 
+// Lấy tất cả review
+router.get('/', ProductReviewController.getAllReviews);
+
 // Lấy review theo review_id
 router.get('/review/:id', ProductReviewController.getReviewById);
 

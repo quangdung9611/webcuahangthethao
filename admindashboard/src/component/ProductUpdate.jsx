@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import JoditEditor from "jodit-react";
-
+import DOMPurify from "dompurify"; // ✅ Thêm thư viện này
 import "../CSS/productupdate.css"; // Đảm bảo file CSS này tồn tại
 
 // Gợi ý size theo danh mục
 const variantSuggestions = {
-  "Áo Thun": { sizes: ["S", "M", "L", "XL", "XXL"], imagePerColor: false },
+  "Áo Cầu Lông": { sizes: ["S", "M", "L", "XL", "XXL"], imagePerColor: false },
   "Giày Cầu Lông": { sizes: ["38", "39", "40", "41", "42", "43", "44"], imagePerColor: true },
   "Vợt Cầu Lông": { sizes: ["3U", "4U"], imagePerColor: false },
   "Vợt PickleBall": { sizes: ["3U", "4U"], imagePerColor: false },
@@ -16,9 +16,19 @@ const variantSuggestions = {
 
 // Bảng màu chung
 const colorPalette = [
-  "Đen", "Trắng", "Đỏ", "Xanh", "Vàng", "Xám", "Xanh Navy", "Hồng", "Nâu", "Cam",
+  "Đen", "Trắng", "Đỏ", "Xanh", "Vàng", "Xám", "Xanh Navy", "Hồng", "Nâu", "Cam", "Tím",
 ];
-
+function toSlug(str) {
+  return str
+    .normalize("NFD") // tách ký tự + dấu
+    .replace(/[\u0300-\u036f]/g, "") // bỏ dấu
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // loại ký tự đặc biệt
+    .trim()
+    .replace(/\s+/g, "-") // khoảng trắng → "-"
+    .toLowerCase();
+}
 export default function ProductUpdate() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -45,35 +55,62 @@ export default function ProductUpdate() {
   const [stockMap, setStockMap] = useState({});
   const [colorFiles, setColorFiles] = useState({}); // Lưu File object mới hoặc string (tên file cũ)
   const [imagePerColor, setImagePerColor] = useState(false);
-
+const [editorContent, setEditorContent] = useState("");
+const typingTimeout = useRef(null);
   // ================== 1. Fetch data cơ bản (Product, Categories, Brands) ==================
+  const stripHtml = (html) => {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return div.textContent || div.innerText || "";
+};
+// 👇 Đặt ngay sau đây
+// useEffect(() => {
+//   setFormData(prev => ({ ...prev, description: editorContent }));
+// }, [editorContent]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Tải Categories và Brands trước
-        const [catRes, brandRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/category"),
-          axios.get("http://localhost:5000/api/brand")
-        ]);
-        setCategories(catRes.data);
-        setBrands(brandRes.data);
+  const fetchData = async () => {
+    try {
+      // Tải danh mục và thương hiệu
+      const [catRes, brandRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/category"),
+        axios.get("http://localhost:5000/api/brand"),
+      ]);
+      setCategories(catRes.data);
+      setBrands(brandRes.data);
 
-        // Tải sản phẩm
-        const productRes = await axios.get(`http://localhost:5000/api/products/${id}`);
-        const { category_id, brand_id, name, slug, description, price, image } = productRes.data;
+      // Tải thông tin sản phẩm
+      const productRes = await axios.get(`http://localhost:5000/api/products/${id}`);
+      const product = productRes.data;
 
-        // Cập nhật formData một lần
-        setFormData({ category_id, brand_id, name, slug, description, price, image });
+      // Gán dữ liệu vào form
+      setFormData({
+        category_id: product.category_id || "",
+        brand_id: product.brand_id || "",
+        name: product.name || "",
+        slug: product.slug || "",
+        description: product.description || "",
+        price: product.price || "",
+        image: product.image || "",
+      });
+      // ✅ Gán nội dung mô tả đã được làm sạch
+        const cleanHTML = DOMPurify.sanitize(product.description || "", {
+          ALLOWED_TAGS: ["p", "ul", "ol", "li", "a", "br"],
+          ALLOWED_ATTR: ["href", "target"],
+        });
+      // Gán nội dung HTML vào editor
+      setEditorContent(product.description || "");
 
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Lỗi khi tải dữ liệu ban đầu:", err);
-        alert("Không thể tải dữ liệu sản phẩm.");
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]); // CHỈ phụ thuộc vào ID, đảm bảo không chạy lại khi state thay đổi
+      setIsLoading(false);
+    } catch (err) {
+      console.error("Lỗi khi tải dữ liệu ban đầu:", err);
+      alert("Không thể tải dữ liệu sản phẩm.");
+      setIsLoading(false);
+    }
+  };
+
+  fetchData();
+}, [id]);
 
   // ================== 2. Fetch Biến thể (Variants) ==================
   const fetchVariants = useCallback(async (currentCategoryId, currentCategories) => {
@@ -137,15 +174,31 @@ export default function ProductUpdate() {
   }, [isLoading, formData.category_id, categories, fetchVariants]);
 
   // ================== Handle Input ==================
-
+const generateSlug = (text) => {
+  return text
+    .toLowerCase()
+    .normalize("NFD") // loại bỏ dấu tiếng Việt
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-") // thay thế ký tự không hợp lệ bằng dấu gạch ngang
+    .replace(/^-+|-+$/g, ""); // loại bỏ dấu gạch ngang ở đầu/cuối
+};
   // Hàm xử lý chung cho input/select
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-    // Đây là bước quan trọng: cập nhật state
-    setFormData(prev => ({ ...prev, [name]: value }));
-  }, []); // Không có dependency, không chạy lại
+ const handleChange = (e) => {
+  const { name, value } = e.target;
 
-  // Hàm xử lý file ảnh chính
+  if (name === "price") {
+    // Loại bỏ dấu phân cách, chỉ lấy số
+    const numericValue = parseInt(value.replace(/\./g, ""), 10) || 0;
+    setFormData(prev => ({ ...prev, price: numericValue }));
+  } else if (name === "name") {
+  const generatedSlug = toSlug(value); // ✅ dùng hàm mới
+  setFormData(prev => ({ ...prev, name: value, slug: generatedSlug }));
+}
+ else {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  }
+};
+ // Hàm xử lý file ảnh chính
   const handleFileChange = (e) => setFile(e.target.files[0]);
 
   // ================== Handle Biến thể ==================
@@ -173,77 +226,85 @@ export default function ProductUpdate() {
 
 
   // ================== Submit ==================
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    const { category_id, brand_id, name, slug, price, description } = formData;
-    if (!category_id || !brand_id || !name || !slug || !price) {
-      alert("Vui lòng nhập đầy đủ thông tin sản phẩm bắt buộc!");
-      return;
-    }
-    try {
-      // 1. Cập nhật thông tin sản phẩm
-      const productData = new FormData();
-      Object.keys(formData).forEach(k => {
-        // Append tất cả các trường, bao gồm HTML description
-        productData.append(k, formData[k]);
-      });
-      if (file) productData.append("image", file); // Thêm ảnh chính mới (nếu có)
+ // --- Trong handleUpdate ---
+const handleUpdate = async (e) => {
+  e.preventDefault();
+  const { category_id, brand_id, name, slug, price, description } = formData;
+  if (!category_id || !brand_id || !name || !slug || !price) {
+    alert("Vui lòng nhập đầy đủ thông tin sản phẩm bắt buộc!");
+    return;
+  }
+  try {
+    const productData = new FormData();
+    Object.keys(formData).forEach(k => {
+      if (k !== "description") productData.append(k, formData[k]);
+    });
 
-      await axios.put(`http://localhost:5000/api/products/${id}`, productData);
+    // ✅ sửa: sanitize description trước khi gửi
+    const sanitizedDesc = DOMPurify.sanitize(editorContent, {
+      ALLOWED_TAGS: ["p", "ul", "ol", "li", "a", "br"],
+      ALLOWED_ATTR: ["href", "target"],
+    });
+    productData.append("description", sanitizedDesc);
 
+    // ✅ sửa: ép kiểu giá rõ ràng
+    productData.append("price", parseInt(formData.price, 10));
 
-      // 2. Cập nhật/Tạo biến thể (Materials)
-      const variantsArray = [];
-      const sizesToIterate = selectedSizes.length > 0 ? selectedSizes : [""];
-      const colorsToIterate = selectedColors.length > 0 ? selectedColors : [""];
+    if (file) productData.append("image", file);
 
-      sizesToIterate.forEach(size => {
-        colorsToIterate.forEach(color => {
-          const key = `${size || ""}-${color || ""}`;
-          const stockValue = stockMap[key] || 0;
-          const colorFile = colorFiles[color];
+    await axios.put(`http://localhost:5000/api/products/${id}`, productData);
 
-          let imageName = null;
-          if (imagePerColor) {
-             if (colorFile instanceof File) {
-                 imageName = colorFile.name; // Tên file mới
-             } else if (typeof colorFile === "string") {
-                 imageName = colorFile; // Tên file cũ từ DB
-             }
-          }
+    // --- Cập nhật biến thể ---
+    const variantsArray = [];
+    const sizesToIterate = selectedSizes.length > 0 ? selectedSizes : [""];
+    const colorsToIterate = selectedColors.length > 0 ? selectedColors : [""];
 
-          variantsArray.push({
-            size,
-            color,
-            stock: stockValue,
-            image: imageName, // Gửi tên file (mới hoặc cũ) để backend lưu vào DB
-          });
+    sizesToIterate.forEach(size => {
+      colorsToIterate.forEach(color => {
+        const key = `${size || ""}-${color || ""}`;
+        const stockValue = stockMap[key] || 0;
+        const colorFile = colorFiles[color];
+
+        let imageName = null;
+        if (imagePerColor) {
+           if (colorFile instanceof File) {
+               imageName = colorFile.name; // ✅ sửa: tên file mới
+           } else if (typeof colorFile === "string") {
+               imageName = colorFile; // ✅ sửa: tên file cũ
+           }
+        }
+
+        variantsArray.push({
+          size,
+          color,
+          stock: stockValue,
+          image: imageName,
         });
       });
+    });
 
-      const variantData = new FormData();
-      variantData.append("product_id", id);
-      variantData.append("variants", JSON.stringify(variantsArray)); // Mảng biến thể
+    const variantData = new FormData();
+    variantData.append("product_id", id);
+    variantData.append("variants", JSON.stringify(variantsArray));
 
-      // Thêm các file ảnh biến thể MỚI vào FormData để upload
-      if (imagePerColor) {
-        Object.keys(colorFiles).forEach(color => {
-          const fileOrString = colorFiles[color];
-          if (fileOrString instanceof File) {
-            variantData.append(`colorFile-${color}`, fileOrString);
-          }
-        });
-      }
-
-      await axios.put(`http://localhost:5000/api/product-materials/upsert/${id}`, variantData);
-
-      alert("Cập nhật sản phẩm và biến thể thành công!");
-      navigate("/product");
-    } catch (err) {
-      console.error("Lỗi cập nhật:", err);
-      alert("Cập nhật thất bại!");
+    if (imagePerColor) {
+      Object.keys(colorFiles).forEach(color => {
+        const fileOrString = colorFiles[color];
+        if (fileOrString instanceof File) {
+          variantData.append(`colorFile-${color}`, fileOrString); // ✅ sửa: upload file mới
+        }
+      });
     }
-  };
+
+    await axios.put(`http://localhost:5000/api/product-materials/upsert/${id}`, variantData);
+
+    alert("Cập nhật sản phẩm và biến thể thành công!");
+    navigate("/product");
+  } catch (err) {
+    console.error("Lỗi cập nhật:", err);
+    alert("Cập nhật thất bại!");
+  }
+};
 
   if (isLoading) {
     return <div className="update-form-container">Đang tải dữ liệu...</div>;
@@ -278,44 +339,61 @@ export default function ProductUpdate() {
         <input type="text" name="slug" value={formData.slug} onChange={handleChange} required />
 
      {/* Description (JoditEditor) */}
-<label>Mô tả</label>
+ 
 <JoditEditor
   ref={editor}
-  value={formData.description}
+  value={editorContent}
+  onBlur={(newContent) => {
+    // ✅ sửa: cập nhật editorContent và formData.description khi blur, tránh render liên tục
+    setEditorContent(newContent);
+    setFormData((prev) => ({ ...prev, description: newContent }));
+  }}
   config={{
     readonly: false,
-    height: 400,
+    height: 300,
     toolbarSticky: false,
-    toolbarAdaptive: false,
-    buttons: [
-      'bold', 'italic', 'underline', '|',
-      'ul', 'ol', '|',
-      'font', 'fontsize', 'paragraph', '|',
-      'image', 'link', 'table', '|',
-      'align', 'undo', 'redo', 'eraser', 'copyformat', '|',
-      'source'
-    ],
-    uploader: { insertImageAsBase64URI: true },
-    removeButtons: ['about'],
+    buttons:
+      "ul,ol,|,left,center,right,justify,|,link,image,table,|,source",
+    showCharsCounter: true,
+    showWordsCounter: true,
+    showXPathInStatusbar: false,
+    cleanHTML: {
+      cleanOnPaste: true,
+      replaceNBSP: true,
+      removeEmptyElements: true,
+      removeTags: ["style", "script", "b", "strong", "i", "u"], // ✅ sửa: loại bỏ thẻ in đậm, nghiêng, underline
+    },
+    askBeforePasteHTML: false,
+    askBeforePasteFromWord: false,
+    disablePlugins: ["pasteStorage"],
+    pasteHTMLAction: "insert_clear",
+    processPasteHTML: true,
+    processPasteFromWord: true,
   }}
-  onChange={content => setFormData(prev => ({ ...prev, description: content }))}
-/>
+  />
+      <label>Giá</label>
+       <input
+          type="text"
+          name="price"
+          value={formData.price.toLocaleString("vi-VN")}
+          onChange={handleChange}
+          required
+        />
 
-        {/* Price */}
-        <label>Giá *</label>
-        <input type="number" name="price" value={formData.price} onChange={handleChange} required />
 
         {/* Main Image */}
         <label>Hình ảnh chính *</label>
         <input type="file" onChange={handleFileChange} />
         {formData.image && (
-          <img 
-            src={`http://localhost:5000/images/${formData.image}`} 
-            alt="Hình sản phẩm" 
-            style={{ width: '200px', height: 'auto', display: 'block', marginTop: '10px' }}
-          />
+          <>
+            <img 
+              src={`http://localhost:5000/images/${formData.image}`} 
+              alt="Hình sản phẩm" 
+              style={{ width: '200px', height: 'auto', display: 'block', marginTop: '10px' }}
+            />
+            <p style={{ marginTop: '5px', fontStyle: 'italic' }}>Tên ảnh: {formData.image}</p>
+          </>
         )}
-
         {/* Size Selection */}
         {sizes.length > 0 && (
           <div>

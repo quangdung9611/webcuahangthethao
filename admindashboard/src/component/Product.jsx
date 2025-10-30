@@ -9,36 +9,49 @@ function Product() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 4;
+  const productsPerPage = 8;
 
   // ==== Lấy danh sách sản phẩm có phân trang ====
-  const fetchProducts = () => {
-    fetch(`http://localhost:5000/api/products?page=${currentPage}&limit=1000`)
-      .then((res) => res.json())
-      .then((data) => {
-        const productList = Array.isArray(data)
-          ? data
-          : Array.isArray(data.products)
-          ? data.products
-          : [];
-        setProducts(productList);
-        setFilteredProducts(productList);
-      })
-      .catch((err) => console.error("Lỗi khi lấy dữ liệu sản phẩm:", err));
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/products?page=${currentPage}&limit=1000`);
+      const data = await res.json();
+
+      // ✅ Đảm bảo lấy đúng dữ liệu dù backend trả về format nào
+      let productList = [];
+      if (Array.isArray(data)) {
+        productList = data;
+      } else if (data && Array.isArray(data.products)) {
+        productList = data.products;
+      } else if (data && data.data && Array.isArray(data.data)) {
+        productList = data.data;
+      }
+
+      setProducts(productList);
+      setFilteredProducts(productList);
+    } catch (err) {
+      console.error("Lỗi khi lấy dữ liệu sản phẩm:", err);
+    }
   };
 
-  const fetchCategories = () => {
-    fetch("http://localhost:5000/api/category")
-      .then((res) => res.json())
-      .then((data) => setCategories(data))
-      .catch((err) => console.error("Lỗi khi lấy loại sản phẩm:", err));
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/category");
+      const data = await res.json();
+      setCategories(data);
+    } catch (err) {
+      console.error("Lỗi khi lấy loại sản phẩm:", err);
+    }
   };
 
-  const fetchBrands = () => {
-    fetch("http://localhost:5000/api/brand")
-      .then((res) => res.json())
-      .then((data) => setBrands(data))
-      .catch((err) => console.error("Lỗi khi lấy thương hiệu:", err));
+  const fetchBrands = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/brand");
+      const data = await res.json();
+      setBrands(data);
+    } catch (err) {
+      console.error("Lỗi khi lấy thương hiệu:", err);
+    }
   };
 
   useEffect(() => {
@@ -47,6 +60,7 @@ function Product() {
     fetchBrands();
   }, []);
 
+  // ==== Lọc sản phẩm theo loại và thương hiệu ====
   const filterProducts = (categoryId, brandId) => {
     let filtered = Array.isArray(products) ? [...products] : [];
 
@@ -76,36 +90,66 @@ function Product() {
     filterProducts(selectedCategory, brandId);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) {
-      fetch(`http://localhost:5000/api/products/${id}`, {
+  // ==== Xóa sản phẩm ====
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
         method: "DELETE",
-      })
-        .then((res) => {
-          if (res.ok) {
-            fetchProducts();
-          } else {
-            console.error("Lỗi khi xóa:", res.statusText);
-          }
-        })
-        .catch((err) => console.error("Lỗi khi xóa:", err));
+      });
+
+      if (res.ok) {
+        alert("Xóa sản phẩm thành công!");
+
+        // ✅ Cập nhật danh sách ngay trên frontend
+        const updatedProducts = products.filter((p) => p.product_id !== id);
+        setProducts(updatedProducts);
+
+        // ✅ Lọc lại danh sách theo filter hiện tại
+        let filtered = [...updatedProducts];
+        if (selectedCategory) {
+          filtered = filtered.filter(
+            (p) => String(p.category_id) === String(selectedCategory)
+          );
+        }
+        if (selectedBrand) {
+          filtered = filtered.filter(
+            (p) => String(p.brand_id) === String(selectedBrand)
+          );
+        }
+
+        setFilteredProducts(filtered);
+        setCurrentPage(1);
+      } else {
+        alert("Lỗi khi xóa sản phẩm!");
+      }
+    } catch (err) {
+      console.error("Lỗi khi xóa:", err);
     }
   };
 
+  // ==== Phân trang ====
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
   const currentProducts = Array.isArray(filteredProducts)
     ? filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
     : [];
 
-  const totalPages = Math.ceil(
-    Array.isArray(filteredProducts) ? filteredProducts.length / productsPerPage : 1
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      Array.isArray(filteredProducts)
+        ? filteredProducts.length / productsPerPage
+        : 1
+    )
   );
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
+  // ==== Giao diện ====
   return (
     <div className="user-list">
       <div className="header-actions">
@@ -194,6 +238,7 @@ function Product() {
         </tbody>
       </table>
 
+      {/* ==== Phân trang ==== */}
       <div className="pagination">
         <button
           disabled={currentPage === 1}

@@ -161,17 +161,17 @@ const TrangChu = () => {
         {/* ... lợi ích khách hàng giữ nguyên ... */}
       </div>
 
-      {!searchQuery && selectedSlug && (
-        <>
-          <div className="title-head">SẢN PHẨM MỚI</div>
-          <CategorySelectorSlider
-            selectedSlug={selectedSlug}
-            onSelect={setSelectedSlug}
-            categories={categories}
-          />
-          <NewestProductsSlider slug={selectedSlug} />
-        </>
-      )}
+        {!searchQuery && selectedSlug && (
+      <>
+        <div className="title-head">SẢN PHẨM MỚI</div>
+            <CategorySelectorSlider
+        selectedSlug={selectedSlug}
+        onSelect={setSelectedSlug} // ✅ khi chọn category mới, slider cập nhật
+        categories={categories}
+      />
+        <NewestProductsSlider slug={selectedSlug} />
+      </>
+    )}
 
       <div className="title-head">
         {searchQuery
@@ -273,7 +273,7 @@ const TrangChu = () => {
             <div className="news-box" key={news.news_id}>
               <div className="thumbnail-frame">
                 <img
-                  src={`http://localhost:5000/images/${news.image}`}
+                  src={`http://localhost:5000/images/news/${news.image}`}
                   alt={news.title}
                   className="thumbnail-img"
                 />

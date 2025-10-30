@@ -28,6 +28,7 @@
 /* Input và File Upload */
 .form-container input[type="text"],
 .form-container input[type="number"],
+.form-container input[type="date"],
 .form-container select,
 .form-container input[type="file"] {
   width: 100%;

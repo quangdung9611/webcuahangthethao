@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import CryptoJS from "crypto-js";
 import "../CSS/checkout.css";
 
 export default function Checkout() {
@@ -11,44 +10,53 @@ export default function Checkout() {
   const [voucherCode, setVoucherCode] = useState("");
   const [total, setTotal] = useState(0);
   const [finalAmount, setFinalAmount] = useState(0);
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const navigate = useNavigate();
 
- useEffect(() => {
-  const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
-  setCart(storedCart);
+  useEffect(() => {
+    const storedCart = JSON.parse(localStorage.getItem("cart")) || [];
+    setCart(storedCart);
 
-  const t = storedCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  setTotal(t);
-  setFinalAmount(t);
+    const t = storedCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    setTotal(t);
+    setFinalAmount(t);
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user) {
-    setRecipientName(user.username || "");
-    setPhone(user.phone || "");
-    setAddressLine(user.address || "");
-  }
-}, []);
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+      setRecipientName(user.username || "");
+      setPhone(user.phone || "");
+      setAddressLine(user.address || "");
+    }
+  }, []);
+
   const handleApplyVoucher = async () => {
-    if (!voucherCode) return alert("Vui lòng nhập mã giảm giá");
-    if (cart.length === 0) return alert("Giỏ hàng trống");
+    if (!voucherCode.trim()) {
+      setNotification({ show: true, message: "Vui lòng nhập mã giảm giá!", type: "error" });
+      return;
+    }
+
+    if (cart.length === 0) {
+      setNotification({ show: true, message: "Giỏ hàng trống!", type: "error" });
+      return;
+    }
 
     try {
-      const secretKey = "your-secret-key"; // 👉 nên dùng biến môi trường
-      const encryptedCode = CryptoJS.AES.encrypt(voucherCode, secretKey).toString();
-
       const res = await fetch("http://localhost:5000/api/vouchers/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: encryptedCode }),
+        body: JSON.stringify({ code: voucherCode }),
       });
 
-      if (!res.ok) throw new Error("Mã giảm giá không hợp lệ hoặc đã hết hạn");
+      if (!res.ok) throw new Error("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
       const voucher = await res.json();
 
       if (total < voucher.min_order_amount) {
-        return alert(
-          `Đơn hàng phải từ ${voucher.min_order_amount.toLocaleString("vi-VN")} VNĐ để sử dụng voucher này!`
-        );
+        setNotification({
+          show: true,
+          message: `Đơn hàng phải từ ${voucher.min_order_amount.toLocaleString("vi-VN")} VNĐ để sử dụng voucher này!`,
+          type: "error",
+        });
+        return;
       }
 
       let newAmount = total;
@@ -59,26 +67,35 @@ export default function Checkout() {
       }
 
       setFinalAmount(newAmount);
-      alert(`Voucher áp dụng thành công! Tổng thanh toán: ${newAmount.toLocaleString("vi-VN")} VNĐ`);
+      setNotification({
+        show: true,
+        message: `🎉 Mã giảm giá áp dụng thành công! Tổng thanh toán: ${newAmount.toLocaleString("vi-VN")} VNĐ`,
+        type: "success",
+      });
     } catch (err) {
-      alert(err.message || "Lỗi khi áp dụng mã giảm giá!");
+      setNotification({
+        show: true,
+        message: err.message || "Lỗi khi áp dụng mã giảm giá!",
+        type: "error",
+      });
     }
   };
 
   const handleCheckout = async () => {
     if (!recipientName || !phone || !addressLine) {
-      return alert("Vui lòng nhập đầy đủ thông tin người nhận!");
+      setNotification({ show: true, message: "Vui lòng nhập đầy đủ thông tin người nhận!", type: "error" });
+      return;
     }
 
     const user = JSON.parse(localStorage.getItem("user"));
     if (!user || !user.user_id) {
-      alert("Vui lòng đăng nhập trước khi thanh toán!");
+      setNotification({ show: true, message: "Vui lòng đăng nhập trước khi thanh toán!", type: "error" });
       navigate("/login");
       return;
     }
 
     if (cart.length === 0) {
-      alert("Giỏ hàng trống!");
+      setNotification({ show: true, message: "Giỏ hàng trống!", type: "error" });
       return;
     }
 
@@ -90,22 +107,22 @@ export default function Checkout() {
         let materialId = item.material_id;
 
         if (!productId) {
-          return alert(`Sản phẩm "${item.name}" bị lỗi ID!`);
+          setNotification({ show: true, message: `Sản phẩm "${item.name}" bị lỗi ID!`, type: "error" });
+          return;
         }
 
         if (!materialId) {
           const res = await fetch(`http://localhost:5000/api/product-materials/${productId}`);
           if (!res.ok) {
-            return alert(`Không lấy được biến thể cho sản phẩm "${item.name}"`);
+            setNotification({ show: true, message: `Không lấy được biến thể cho sản phẩm "${item.name}"`, type: "error" });
+            return;
           }
 
           const materials = await res.json();
-          const matched = materials.find(
-            (m) => m.color === item.color && m.size === item.size
-          );
-
+          const matched = materials.find((m) => m.color === item.color && m.size === item.size);
           if (!matched) {
-            return alert(`Sản phẩm "${item.name}" chưa có biến thể phù hợp!`);
+            setNotification({ show: true, message: `Sản phẩm "${item.name}" chưa có biến thể phù hợp!`, type: "error" });
+            return;
           }
 
           materialId = matched.material_id;
@@ -113,20 +130,25 @@ export default function Checkout() {
 
         const stockRes = await fetch(`http://localhost:5000/api/product-materials/${materialId}/stock`);
         if (!stockRes.ok) {
-          return alert(`Không kiểm tra được tồn kho cho sản phẩm "${item.name}"`);
+          setNotification({ show: true, message: `Không kiểm tra được tồn kho cho sản phẩm "${item.name}"`, type: "error" });
+          return;
         }
 
         const materialData = await stockRes.json();
         const currentStock = materialData.stock;
 
         if (currentStock === undefined) {
-          return alert(`Sản phẩm "${item.name}" chưa có thông tin tồn kho!`);
+          setNotification({ show: true, message: `Sản phẩm "${item.name}" chưa có thông tin tồn kho!`, type: "error" });
+          return;
         }
 
         if (currentStock < item.quantity) {
-          return alert(
-            `Sản phẩm "${item.name}" chỉ còn ${currentStock} sản phẩm, bạn đã chọn ${item.quantity}!`
-          );
+          setNotification({
+            show: true,
+            message: `Sản phẩm "${item.name}" chỉ còn ${currentStock} sản phẩm, bạn đã chọn ${item.quantity}!`,
+            type: "error",
+          });
+          return;
         }
 
         updatedCart.push({
@@ -156,16 +178,21 @@ export default function Checkout() {
       });
 
       const data = await res.json();
+
       if (res.ok) {
-        alert("Thanh toán thành công!");
+        setNotification({
+          show: true,
+          message: "🎉 Thanh toán thành công! Cảm ơn bạn đã mua hàng ❤️",
+          type: "success",
+        });
         localStorage.removeItem("cart");
-        navigate(`/order-success/${data.order_id}`);
+        setTimeout(() => navigate(`/order-success/${data.order_id}`), 1500);
       } else {
-        alert(data.error || "Lỗi khi thanh toán!");
+        setNotification({ show: true, message: data.error || "Lỗi khi thanh toán!", type: "error" });
       }
     } catch (err) {
       console.error(err);
-      alert("Lỗi kết nối đến máy chủ.");
+      setNotification({ show: true, message: "Lỗi kết nối đến máy chủ.", type: "error" });
     }
   };
 
@@ -231,6 +258,17 @@ export default function Checkout() {
       <button className="checkout-btn" onClick={handleCheckout}>
         Thanh Toán
       </button>
+
+      {notification.show && (
+        <div className="notification-overlay">
+          <div className={`notification-modal ${notification.type}`}>
+            <p>{notification.message}</p>
+            <button onClick={() => setNotification({ show: false, message: "", type: "" })}>
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

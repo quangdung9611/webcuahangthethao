@@ -1,8 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import JoditEditor from "jodit-react";
+import DOMPurify from "dompurify";
+import "../CSS/product.css";
 
 const NewsAdminAdd = () => {
   const navigate = useNavigate();
+  const editor = useRef(null);
 
   const [formData, setFormData] = useState({
     category_id: "",
@@ -16,17 +20,31 @@ const NewsAdminAdd = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  const generateSlug = (text) =>
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    if (name === "title") {
+      setFormData((prev) => ({
+        ...prev,
+        title: value,
+        slug: generateSlug(value),
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    let validationErrors = {};
 
+    let validationErrors = {};
     if (!formData.title) validationErrors.title = "Tiêu đề không được để trống";
     if (!formData.slug) validationErrors.slug = "Slug không được để trống";
     if (!formData.content) validationErrors.content = "Nội dung không được để trống";
@@ -41,45 +59,49 @@ const NewsAdminAdd = () => {
     data.append("category_id", formData.category_id);
     data.append("title", formData.title);
     data.append("slug", formData.slug);
-    data.append("content", formData.content);
+    data.append(
+      "content",
+      DOMPurify.sanitize(formData.content, {
+        ALLOWED_TAGS: ["p", "ul", "ol", "li", "a", "br", "img"],
+        ALLOWED_ATTR: ["href", "target", "src", "alt"],
+        FORBID_TAGS: ["b", "strong", "i", "u", "style", "script"],
+      })
+    );
     data.append("status", formData.status);
     data.append("published_at", formData.published_at);
     if (image) data.append("image", image);
 
     setLoading(true);
-    fetch("http://localhost:5000/api/news", {
-      method: "POST",
-      body: data,
-    })
-      .then((res) => res.json())
-      .then((resData) => {
-        console.log("Response:", resData);
-        setTimeout(() => {
-          navigate("/news");
-        }, 1000);
-
-        setFormData({
-          category_id: "",
-          title: "",
-          slug: "",
-          content: "",
-          status: "draft",
-          published_at: "",
-        });
-        setImage(null);
-        setErrors({});
-      })
-      .catch((err) => {
-        console.error("Error when adding news:", err);
-      })
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetch("http://localhost:5000/api/news", {
+        method: "POST",
+        body: data,
+      });
+      const result = await res.json();
+      console.log("Response:", result);
+      navigate("/news");
+      // Reset form
+      setFormData({
+        category_id: "",
+        title: "",
+        slug: "",
+        content: "",
+        status: "draft",
+        published_at: "",
+      });
+      setImage(null);
+      setErrors({});
+    } catch (err) {
+      console.error("Error when adding news:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="update-form-container">
       <h2>Thêm Tin Tức</h2>
       <form onSubmit={handleSubmit}>
-        {/* Danh mục */}
         <label>Danh mục</label>
         <select
           name="category_id"
@@ -95,7 +117,6 @@ const NewsAdminAdd = () => {
         </select>
         {errors.category_id && <p className="error">{errors.category_id}</p>}
 
-        {/* Tiêu đề */}
         <label>Tiêu đề</label>
         <input
           type="text"
@@ -107,31 +128,44 @@ const NewsAdminAdd = () => {
         />
         {errors.title && <p className="error">{errors.title}</p>}
 
-        {/* Slug */}
         <label>Slug</label>
         <input
           type="text"
           name="slug"
           value={formData.slug}
           onChange={handleChange}
-          placeholder="Nhập slug (đường dẫn)"
+          placeholder="Nhập slug"
           required
+          disabled
         />
         {errors.slug && <p className="error">{errors.slug}</p>}
 
-        {/* Nội dung */}
         <label>Nội dung</label>
-        <textarea
-          name="content"
+        <JoditEditor
+          ref={editor}
           value={formData.content}
-          onChange={handleChange}
-          placeholder="Nhập nội dung"
-          rows={6}
-          required
+          onBlur={(newContent) => setFormData((prev) => ({ ...prev, content: newContent }))}
+          config={{
+            readonly: false,
+            height: 300,
+            toolbarSticky: false,
+            buttons: "ul,ol,|,left,center,right,justify,|,link,image,table,|,source",
+            cleanHTML: {
+              cleanOnPaste: true,
+              replaceNBSP: true,
+              removeEmptyElements: true,
+              removeTags: ["style", "script", "b", "strong", "u", "i"],
+            },
+            askBeforePasteHTML: false,
+            askBeforePasteFromWord: false,
+            disablePlugins: ["pasteStorage"],
+            pasteHTMLAction: "insert_clear",
+            processPasteHTML: true,
+            processPasteFromWord: true,
+          }}
         />
         {errors.content && <p className="error">{errors.content}</p>}
 
-        {/* Trạng thái */}
         <label>Trạng thái</label>
         <select name="status" value={formData.status} onChange={handleChange}>
           <option value="draft">Draft</option>
@@ -139,7 +173,6 @@ const NewsAdminAdd = () => {
           <option value="archived">Archived</option>
         </select>
 
-        {/* Ngày xuất bản */}
         <label>Ngày xuất bản</label>
         <input
           type="date"
@@ -148,13 +181,8 @@ const NewsAdminAdd = () => {
           onChange={handleChange}
         />
 
-        {/* Ảnh */}
         <label>Ảnh</label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImage(e.target.files[0])}
-        />
+        <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
 
         <button type="submit" disabled={loading}>
           {loading ? "Đang thêm..." : "Thêm"}

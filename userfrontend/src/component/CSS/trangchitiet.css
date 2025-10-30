@@ -46,7 +46,7 @@ body, .container, .container * {
 
 .product-info p:first-of-type { /* Chỉnh giá */
     font-size: 1.5em;
-    color: #e44d26; /* Màu nổi bật cho giá */
+    color: red; /* Màu nổi bật cho giá */
     font-weight: bold;
     margin-bottom: 20px;
 }
@@ -63,7 +63,10 @@ body, .container, .container * {
     font-size: 1.1em;
     color: #555;
 }
-
+.product-description{
+  text-align: justify;
+   line-height: 1.6;
+}
 .option-chips {
     display: flex;
     flex-wrap: wrap;
@@ -155,7 +158,7 @@ body, .container, .container * {
     position: relative;
     overflow: hidden;            /* để hiệu ứng sáng không tràn ra ngoài */
     background-color: #ff3300;
-    color: black;
+    color: white;
     border: none;
     padding: 12px 30px;
     font-size: 16px;
@@ -205,109 +208,188 @@ body, .container, .container * {
 }
 
 /* làm giao modal form đặt trước */
+/* 🎨 Modal Overlay */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5); /* nền mờ */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 999;
 }
 
+/* 📦 Modal Content */
 .modal-content {
-  background: white;
-  padding: 20px;
-  max-width: 400px;
-  width: 90%;
-  border-radius: 8px;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s ease-in-out;
 }
 
+/* ✨ Tiêu đề */
 .modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  color: #333;
+  font-weight: 600;
+  text-align: center;
 }
 
+/* 🏷️ Label */
 .modal-content label {
   display: block;
-  margin-top: 10px;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #555;
 }
 
+/* 🖊️ Input & Textarea */
 .modal-content input,
 .modal-content textarea {
   width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  box-sizing: border-box;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
 }
 
+.modal-content input:focus,
+.modal-content textarea:focus {
+  border-color: #007bff;
+  outline: none;
+}
+
+/* 🧭 Modal Actions */
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 15px;
-}
-
-.modal-actions button {
-  margin-left: 10px;
-  padding: 8px 12px;
-}
-
-/* Nút mở modal */
-.btn-review {
-  padding: 10px 20px;
-  background: #ff6a00;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  margin-top: 20px;
-  border-radius: 5px;
-}
-
-.overlay-review {
-  background: rgba(0, 0, 0, 0.6);
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.modal-review {
-  background: #fff;
-  max-width: 500px;
-  margin: 80px auto;
-  padding: 20px;
-  border-radius: 10px;
-}
-
-.modal-review h2 {
-  margin-bottom: 15px;
-}
-
-.modal-review textarea {
-  width: 100%;
-  min-height: 100px;
-  padding: 10px;
-  margin-top: 5px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-}
-
-.modal-buttons {
-  display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
 }
 
-.modal-buttons button {
-  padding: 8px 15px;
+/* 🧵 Buttons */
+.modal-actions button {
+  flex: 1;
+  padding: 10px 0;
   border: none;
+  border-radius: 8px;
+  font-size: 15px;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
+.modal-actions button[type="button"] {
+  background-color: #f44336;
+  color: white;
+}
+
+.modal-actions button[type="submit"] {
+  background-color: #28a745;
+  color: white;
+}
+
+.modal-actions button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+/* 🌀 Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* 🎯 Modal Actions */
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* 🧵 Nút chung */
+.modal-actions button {
+  flex: 1;
+  padding: 10px 0;
+  font-size: 15px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+/* ❌ Nút Hủy */
+.modal-actions button:first-child {
+  background-color: #dc3545;
+  color: white;
+}
+
+.modal-actions button:first-child:hover {
+  background-color: #c82333;
+  transform: scale(1.02);
+}
+
+/* 📩 Nút Gửi đánh giá */
+.modal-actions button:last-child {
+  background-color: #007bff;
+  color: white;
+}
+
+.modal-actions button:last-child:hover {
+  background-color: #0056b3;
+  transform: scale(1.02);
+}
+.modal-content h3 {
+  font-size: 20px;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.modal-content p {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: red;
+}
+
+.modal-content.success {
+  border-left: 6px solid #28a745;
+}
+
+.modal-content.error {
+  border-left: 6px solid #dc3545;
+}
+/* 🔴 Style cho thông báo lỗi */
+.form-error-text {
+  color: #ff3b3b;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 4px 0 10px;
+}
+
+/* Viền input khi có lỗi */
+.input-error-field {
+  border: 1.5px solid #ff3b3b;
+ 
+}
+.input-error-text {
+  color: red;
+  font-size: 14px;
+  margin-top: 4px;
+}
 .submit-btn {
   background: #28a745;
   color: white;

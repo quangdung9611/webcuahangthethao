@@ -1,7 +1,6 @@
 const db = require('../db'); // file kết nối database
-const CryptoJS = require('crypto-js'); // dùng để giải mã dữ liệu từ frontend
 
-// Lấy tất cả voucher
+// ==================== Lấy tất cả voucher ====================
 exports.getAllVouchers = (req, res) => {
   const sql = `
     SELECT voucher_id, code, description, discount_type, discount_value,
@@ -17,71 +16,35 @@ exports.getAllVouchers = (req, res) => {
   });
 };
 
-// Áp dụng mã voucher (nhận mã đã mã hóa)
+// ==================== Áp dụng mã voucher (không mã hóa) ====================
 exports.getVoucherByCode = (req, res) => {
-  const { payload } = req.body;
-  const secretKey = 'your-secret-key'; // Nên lưu ở biến môi trường
+  const { code } = req.body; // 👈 đúng tên field từ frontend
   const today = new Date().toISOString().slice(0, 10);
 
-  try {
-    const bytes = CryptoJS.AES.decrypt(payload, secretKey);
-    const decryptedCode = bytes.toString(CryptoJS.enc.Utf8);
+  const sql = `
+    SELECT voucher_id
+    FROM voucher
+    WHERE code = ?
+      AND status = 'active'
+      AND (start_date IS NULL OR start_date <= ?)
+      AND (end_date IS NULL OR end_date >= ?)
+      AND used_count < usage_limit
+    LIMIT 1
+  `;
 
-    const sql = `
-      SELECT voucher_id, description, discount_type, discount_value,
-             min_order_amount, usage_limit, used_count, start_date, end_date,
-             status
-      FROM voucher
-      WHERE code = ?
-        AND status = 'active'
-        AND (start_date IS NULL OR start_date <= ?)
-        AND (end_date IS NULL OR end_date >= ?)
-        AND used_count < usage_limit
-      LIMIT 1
-    `;
+  db.query(sql, [code, today, today], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (results.length === 0)
+      return res.status(404).json({ message: "Mã giảm giá không hợp lệ hoặc đã hết hạn" });
 
-    db.query(sql, [decryptedCode, today, today], (err, results) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (results.length === 0)
-        return res.status(404).json({ message: "Mã giảm giá không hợp lệ hoặc đã hết hạn" });
-
-      const {
-        voucher_id,
-        description,
-        discount_type,
-        discount_value,
-        min_order_amount,
-        usage_limit,
-        used_count,
-        start_date,
-        end_date,
-        status
-      } = results[0];
-
-      res.json({
-        valid: true,
-        voucher_id,
-        description,
-        discount_type,
-        discount_value,
-        min_order_amount,
-        usage_limit,
-        used_count,
-        start_date,
-        end_date,
-        status,
-        message: "Áp dụng thành công"
-      });
-    });
-  } catch (err) {
-    return res.status(400).json({ error: "Không thể giải mã mã voucher" });
-  }
+    // ✅ Trả về đơn giản
+    return res.json({ message: "Áp dụng thành công" });
+  });
 };
 
-// Lấy voucher theo ID
+// ==================== Lấy voucher theo ID ====================
 exports.getVoucherById = (req, res) => {
   const { id } = req.params;
-
   const sql = `SELECT * FROM voucher WHERE voucher_id = ? LIMIT 1`;
 
   db.query(sql, [id], (err, results) => {
@@ -92,16 +55,30 @@ exports.getVoucherById = (req, res) => {
   });
 };
 
-// Tạo voucher mới (nhận dữ liệu đã mã hóa)
+// ==================== Tạo voucher mới (không mã hóa) ====================
 exports.createVoucher = (req, res) => {
-  const { payload } = req.body;
-  const secretKey = 'your-secret-key';
+  const {
+    code,
+    description,
+    discount_type,
+    discount_value,
+    min_order_amount,
+    usage_limit,
+    start_date,
+    end_date,
+    status,
+  } = req.body;
 
-  try {
-    const bytes = CryptoJS.AES.decrypt(payload, secretKey);
-    const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+  const sql = `
+    INSERT INTO voucher
+    (code, description, discount_type, discount_value, min_order_amount,
+     usage_limit, start_date, end_date, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
 
-    const {
+  db.query(
+    sql,
+    [
       code,
       description,
       discount_type,
@@ -110,40 +87,16 @@ exports.createVoucher = (req, res) => {
       usage_limit,
       start_date,
       end_date,
-      status,
-    } = decryptedData;
-
-    const sql = `
-      INSERT INTO voucher
-      (code, description, discount_type, discount_value, min_order_amount,
-       usage_limit, start_date, end_date, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    db.query(
-      sql,
-      [
-        code,
-        description,
-        discount_type,
-        discount_value,
-        min_order_amount,
-        usage_limit,
-        start_date,
-        end_date,
-        status || "active",
-      ],
-      (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Tạo voucher thành công", voucherId: result.insertId });
-      }
-    );
-  } catch (err) {
-    return res.status(400).json({ error: "Không thể giải mã dữ liệu voucher" });
-  }
+      status || "active",
+    ],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: "Tạo voucher thành công", voucherId: result.insertId });
+    }
+  );
 };
 
-// Cập nhật voucher
+// ==================== Cập nhật voucher ====================
 exports.updateVoucher = (req, res) => {
   const { id } = req.params;
   const {
@@ -186,7 +139,7 @@ exports.updateVoucher = (req, res) => {
   );
 };
 
-// Xóa voucher
+// ==================== Xóa voucher ====================
 exports.deleteVoucher = (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM voucher WHERE voucher_id=?";

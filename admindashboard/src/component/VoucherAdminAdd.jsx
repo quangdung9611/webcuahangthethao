@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import CryptoJS from "crypto-js";
 import "../CSS/product.css";
 
 function VoucherAdd() {
@@ -17,7 +16,6 @@ function VoucherAdd() {
   });
 
   const navigate = useNavigate();
-  const secretKey = "your-secret-key"; // 🔐 Nên lưu ở biến môi trường
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,27 +29,21 @@ function VoucherAdd() {
       return;
     }
 
-    // 🔒 Mã hóa toàn bộ dữ liệu JSON
-    const encryptedData = CryptoJS.AES.encrypt(
-      JSON.stringify({
-        code: formData.code,
-        description: formData.description,
-        discount_type: formData.discount_type,
-        discount_value: Number(formData.discount_value),
-        min_order_amount: Number(formData.min_order_amount),
-        usage_limit: Number(formData.usage_limit),
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null,
-        status: formData.status,
-      }),
-      secretKey
-    ).toString();
-
     try {
       const res = await fetch("http://localhost:5000/api/vouchers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: encryptedData }),
+        body: JSON.stringify({
+          code: formData.code,
+          description: formData.description,
+          discount_type: formData.discount_type,
+          discount_value: Number(formData.discount_value),
+          min_order_amount: Number(formData.min_order_amount),
+          usage_limit: Number(formData.usage_limit),
+          start_date: formData.start_date || null,
+          end_date: formData.end_date || null,
+          status: formData.status,
+        }),
       });
 
       const data = await res.json();

@@ -1,16 +1,13 @@
-// ProductMaterials.jsx
 import React, { useEffect, useState } from "react";
 import "../CSS/user.css";
 
 function ProductMaterials() {
-  const [materials, setMaterials] = useState([]); // Danh sách biến thể
-  const [products, setProducts] = useState([]);   // Danh sách sản phẩm để lọc
-  const [selectedProduct, setSelectedProduct] = useState(""); // Lọc theo sản phẩm
-
+  const [materials, setMaterials] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const materialsPerPage = 5;
 
-  // Load danh sách materials và sản phẩm
   useEffect(() => {
     fetchMaterials();
     fetchProducts();
@@ -19,18 +16,31 @@ function ProductMaterials() {
   const fetchMaterials = () => {
     fetch("http://localhost:5000/api/product-materials")
       .then((res) => res.json())
-      .then((data) => setMaterials(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setMaterials(data);
+        } else {
+          setMaterials([]);
+        }
+      })
       .catch((err) => console.error(err));
   };
 
   const fetchProducts = () => {
     fetch("http://localhost:5000/api/products")
       .then((res) => res.json())
-      .then((data) => setProducts(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else if (Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else {
+          setProducts([]);
+        }
+      })
       .catch((err) => console.error(err));
   };
 
-  // Xử lý xóa
   const handleDelete = (material_id) => {
     if (!window.confirm("Bạn có chắc muốn xóa biến thể này?")) return;
 
@@ -44,16 +54,19 @@ function ProductMaterials() {
       .catch((err) => console.error(err));
   };
 
-  // Lọc theo product
   const filteredMaterials = selectedProduct
     ? materials.filter((m) => String(m.product_id) === String(selectedProduct))
     : materials;
 
-  // Phân trang
   const indexOfLast = currentPage * materialsPerPage;
   const indexOfFirst = indexOfLast - materialsPerPage;
-  const currentMaterials = filteredMaterials.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(filteredMaterials.length / materialsPerPage);
+  const currentMaterials = Array.isArray(filteredMaterials)
+    ? filteredMaterials.slice(indexOfFirst, indexOfLast)
+    : [];
+
+  const totalPages = Math.ceil(
+    Array.isArray(filteredMaterials) ? filteredMaterials.length / materialsPerPage : 1
+  );
 
   return (
     <div className="user-list">
@@ -71,11 +84,12 @@ function ProductMaterials() {
           className="filter-select"
         >
           <option value="">Tất cả sản phẩm</option>
-          {products.map((p) => (
-            <option key={p.product_id} value={p.product_id}>
-              {p.name}
-            </option>
-          ))}
+          {Array.isArray(products) &&
+            products.map((p) => (
+              <option key={p.product_id} value={p.product_id}>
+                {p.name}
+              </option>
+            ))}
         </select>
       </div>
 
@@ -140,7 +154,6 @@ function ProductMaterials() {
         </tbody>
       </table>
 
-      {/* Phân trang */}
       <div className="pagination">
         <button
           disabled={currentPage === 1}
