@@ -596,7 +596,6 @@ INSERT INTO `news` (`news_id`, `title`, `slug`, `content`, `image`, `status`, `p
 --
 
 
-
 -- --------------------------------------------------------
 
 --
@@ -1020,7 +1019,6 @@ ALTER TABLE `materials`
 --
 -- Constraints for table `news`
 --
-
 
 --
 -- Constraints for table `orders`

@@ -1,0 +1,43 @@
+.tag-list {
+    list-style: none;
+    padding: 0;
+}
+
+.tag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+.tag-name {
+    font-weight: 500;
+    font-size: 16px;
+    color: #333;
+}
+
+.tag-actions button {
+    margin-left: 8px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+}
+
+.tag-actions button:hover {
+    background-color: #0056b3;
+}
+
+.tag-actions .delete-btn {
+    background-color: #dc3545;
+}
+
+.tag-actions .delete-btn:hover {
+    background-color: #a71d2a;
+}

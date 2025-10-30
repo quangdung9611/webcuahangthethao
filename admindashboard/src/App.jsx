@@ -41,6 +41,8 @@ import PagesAdminAdd from "./component/PagesAdminAdd";
 import PagesAdminUpdate from "./component/PagesAdminUpdate";
 import ProductReview from "./component/ProductReview";
 import Feedback from "./component/Feedback";
+import TagAssignmentPanel from "./component/TagAssignmentPanel";
+import TagManager from "./component/TagManager"
 import "./App.css";
 
 function Layout() {
@@ -91,6 +93,9 @@ function Layout() {
             <Route path="/category/add" element={<CategoryAdd />} />
             <Route path="/category/update/:id" element={<CategoryUpdate />} />
 
+             {/* Tag */}
+            <Route path="/tags" element={<TagAssignmentPanel />} />
+            <Route path="/tag-manager" element={<TagManager />} />
             {/* voucher*/}
             <Route path="/voucher" element={<Voucher />} />
             <Route path="/voucher/add" element={<VoucherAdd />} />

@@ -38,7 +38,6 @@ exports.createPreorder = (req, res) => {
       SELECT * FROM materials 
       WHERE product_id = ? AND color = ? AND size = ? LIMIT 1
     `;
-
     db.query(materialSql, [product_id, color, size], (errMat, materialResult) => {
       if (errMat) {
         console.error("❌ Lỗi khi lấy material:", errMat);
@@ -97,7 +96,6 @@ exports.createPreorder = (req, res) => {
     });
   });
 };
-
 // =============================
 // LẤY TẤT CẢ ĐƠN ĐẶT HÀNG TRƯỚC
 // =============================

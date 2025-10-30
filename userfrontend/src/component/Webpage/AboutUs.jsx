@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import "../CSS/about.css";
-
 const AboutUs = () => {
   const [about, setAbout] = useState(null);
   const [loading, setLoading] = useState(true);
