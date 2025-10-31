@@ -136,22 +136,19 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
     FROM products p
     JOIN categories c ON p.category_id = c.category_id
     LEFT JOIN brands b ON p.brand_id = b.brand_id
-    WHERE c.slug = ?
+    JOIN product_tags pt ON p.product_id = pt.product_id
+    WHERE c.slug = ? AND pt.tag_id = 2
     ORDER BY p.created_at DESC
-    LIMIT 5
+    LIMIT 10
   `;
 
   db.query(sql, [slug], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
 
-    // ✅ Chuyển description từ HTML sang text thường
-   const sanitizedResults = results.map(product => ({
+    const sanitizedResults = results.map(product => ({
       ...product,
       description: product.description
-        ? product.description
-            .replace(/<[^>]*>/g, '')
-            .replace(/&nbsp;/gi, ' ')
-            .trim()
+        ? product.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
         : ''
     }));
 
@@ -161,9 +158,6 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
     });
   });
 };
-
-
-
 
 // Lấy sản phẩm theo brand slug
 exports.getProductsByBrands = (req, res) => {

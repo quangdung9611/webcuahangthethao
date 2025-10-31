@@ -10,7 +10,7 @@ const NewestProductsSlider = ({ slug }) => {
   const sliderRef = useRef(null);
 
   useEffect(() => {
-    if (!slug) return; // tránh gọi khi chưa có slug
+    if (!slug) return console.log("Slug received:", slug); // tránh gọi khi chưa có slug
 
     fetch(`http://localhost:5000/api/products/category/${slug}/newest`)
       .then(res => res.json())
@@ -22,20 +22,22 @@ const NewestProductsSlider = ({ slug }) => {
   }, [slug]);
 
   const settings = {
-    infinite: true,
-    speed: 500,
-    slidesToShow: Math.min(5, products.length),
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 3000,
-    arrows: false,
-    pauseOnHover: true,
-    responsive: [
-      { breakpoint: 1024, settings: { slidesToShow: Math.min(4, products.length) } },
-      { breakpoint: 768, settings: { slidesToShow: Math.min(3, products.length) } },
-      { breakpoint: 480, settings: { slidesToShow: Math.min(2, products.length) } },
-    ],
-  };
+  infinite: products.length > 5,
+  speed: 500,
+  slidesToShow: Math.min(5, products.length),
+  slidesToScroll: 1,
+  autoplay: true,
+  autoplaySpeed: 3000,
+  arrows: false, // bạn đang dùng custom buttons nên tắt arrows mặc định
+  pauseOnHover: true,
+  swipeToSlide: true,
+  responsive: [
+    { breakpoint: 1024, settings: { slidesToShow: Math.min(3, products.length) } },
+    { breakpoint: 768, settings: { slidesToShow: Math.min(2, products.length) } },
+    { breakpoint: 480, settings: { slidesToShow: 1 } },
+  ],
+};
+
 
   if (products.length === 0) return null; // Không có sản phẩm thì không render slider
 
