@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 31, 2025 at 09:37 PM
+-- Generation Time: Nov 01, 2025 at 05:32 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -850,10 +850,27 @@ INSERT INTO `product_tags` (`product_id`, `tag_id`) VALUES
 (14, 2),
 (15, 2),
 (33, 2),
+(37, 1),
+(56, 1),
+(58, 1),
 (59, 2),
+(60, 1),
 (60, 2),
+(63, 1),
+(64, 1),
 (67, 2),
+(68, 1),
 (68, 2),
+(89, 1),
+(91, 1),
+(92, 1),
+(96, 1),
+(97, 1),
+(99, 1),
+(100, 1),
+(101, 1),
+(102, 1),
+(103, 1),
 (104, 2),
 (105, 2),
 (106, 2),
@@ -865,22 +882,41 @@ INSERT INTO `product_tags` (`product_id`, `tag_id`) VALUES
 (113, 2),
 (114, 2),
 (115, 2),
+(116, 1),
 (116, 2),
+(117, 1),
 (117, 2),
+(118, 1),
 (118, 2),
+(120, 1),
+(122, 1),
+(123, 1),
+(124, 1),
+(125, 1),
+(126, 1),
+(127, 1),
 (131, 2),
+(132, 1),
 (132, 2),
 (134, 2),
+(135, 1),
 (135, 2),
 (136, 2),
 (137, 2),
 (138, 2),
+(140, 1),
 (142, 2),
 (143, 2),
 (144, 2),
 (145, 2),
 (146, 2),
-(148, 2);
+(147, 1),
+(148, 2),
+(150, 1),
+(154, 1),
+(155, 1),
+(156, 1),
+(158, 1);
 
 -- --------------------------------------------------------
 
@@ -898,8 +934,8 @@ CREATE TABLE `tags` (
 --
 
 INSERT INTO `tags` (`id`, `name`) VALUES
-(1, 'Nổi Bật'),
-(2, 'Sản Phẩm Mới');
+(1, 'Bán Chạy'),
+(2, 'Mới');
 
 -- --------------------------------------------------------
 
@@ -1197,7 +1233,7 @@ ALTER TABLE `product_reviews`
 -- AUTO_INCREMENT for table `product_tags`
 --
 ALTER TABLE `product_tags`
-  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
+  MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=159;
 
 --
 -- AUTO_INCREMENT for table `tags`
