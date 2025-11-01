@@ -117,7 +117,7 @@ exports.getProductsByCategorySlug = (req, res) => {
   });
 };
 
-
+// Lấy sản phẩm với tag id = 2 (Mới) theo category gán vào từ CategorySelectorSlider
 exports.getNewestProductsByCategorySlug = (req, res) => {
   const { slug } = req.params;
 
@@ -132,11 +132,13 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
       p.created_at,
       c.name AS category_name,
       c.slug AS category_slug,
-      b.name AS brand_name
+      b.name AS brand_name,
+      t.name AS tag_name
     FROM products p
     JOIN categories c ON p.category_id = c.category_id
     LEFT JOIN brands b ON p.brand_id = b.brand_id
     JOIN product_tags pt ON p.product_id = pt.product_id
+    JOIN tags t ON pt.tag_id = t.id
     WHERE c.slug = ? AND pt.tag_id = 2
     ORDER BY p.created_at DESC
     LIMIT 10
@@ -149,7 +151,8 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
       ...product,
       description: product.description
         ? product.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
-        : ''
+        : '',
+      tags: product.tag_name // gán tag vào để frontend dùng product.tag
     }));
 
     res.json({
@@ -158,6 +161,52 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
     });
   });
 };
+
+// Lấy sản phẩm với tag id = 1 (Bán Chạy) theo category gán vào từ CategorySelectorSlider
+exports.getBestSellerProductsByCategorySlug = (req, res) => {
+  const { slug } = req.params;
+
+  const sql = `
+    SELECT 
+      p.product_id,
+      p.name,
+      p.slug,
+      p.price,
+      p.image,
+      p.description,
+      p.created_at,
+      c.name AS category_name,
+      c.slug AS category_slug,
+      b.name AS brand_name,
+      t.name AS tag_name
+    FROM products p
+    JOIN categories c ON p.category_id = c.category_id
+    LEFT JOIN brands b ON p.brand_id = b.brand_id
+    JOIN product_tags pt ON p.product_id = pt.product_id
+    JOIN tags t ON pt.tag_id = t.id
+    WHERE c.slug = ? AND pt.tag_id = 1
+    ORDER BY p.created_at DESC
+    LIMIT 10
+  `;
+
+  db.query(sql, [slug], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const sanitizedResults = results.map(product => ({
+      ...product,
+      description: product.description
+        ? product.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
+        : '',
+      tags: product.tag_name // dùng để hiển thị nhãn tag ở frontend
+    }));
+
+    res.json({
+      products: sanitizedResults,
+      total: sanitizedResults.length
+    });
+  });
+};
+
 
 // Lấy sản phẩm theo brand slug
 exports.getProductsByBrands = (req, res) => {

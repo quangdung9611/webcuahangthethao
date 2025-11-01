@@ -1,0 +1,204 @@
+/* ✅ Reset & layout fix */
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: clip; /* ✅ ngăn scroll ngang mà không che nội dung */
+  width: 100%;
+}
+
+/* ✅ Outer container for the tagged products slider */
+.tagged-products-container {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 60px auto 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 16px;
+}
+
+/* ✅ Navigation buttons */
+.tagged-products-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  background-color: #ff4d4f;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10%;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.tagged-products-nav:hover {
+  background-color: #555;
+}
+
+.tagged-products-nav.left {
+  left: 8px;
+}
+
+.tagged-products-nav.right {
+  right: 8px;
+}
+
+/* ✅ Slider wrapper */
+.tagged-products-slider {
+  width: 100%;
+  background: #fff;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+/* ✅ Each slide item */
+.tagged-products-slide {
+  padding: 12px 2px 0;
+  box-sizing: border-box;
+}
+
+/* ✅ Product card */
+.tagged-products-card {
+  width: 180px;
+  padding: 10px;
+  margin-top: -8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.tagged-products-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* ✅ Vùng trống phía trên ảnh để chứa tag */
+.tagged-products-tag-space {
+  position: relative;
+  height: 28px;
+  width: 100%;
+  margin-bottom: -4px;
+}
+
+/* ✅ Wrapper chứa ảnh */
+.tagged-products-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 170px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ✅ Product image */
+.tagged-products-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ✅ Product name */
+.tagged-products-card h4 {
+  font-size: 13px;
+  margin: 0 0 6px;
+  line-height: 1.3;
+  color: #222;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* ✅ Product price */
+.tagged-products-card p {
+  font-size: 12px;
+  color: #333;
+  margin: 0;
+}
+
+/* ✅ Slick slider adjustments */
+.tagged-products-slider .slick-slide {
+  display: flex;
+  justify-content: center;
+}
+
+.tagged-products-slider .slick-track {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.tagged-products-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+/* ✅ Tag badge */
+.product-tag {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  color: white;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+  background-color: #dc3545;
+  white-space: nowrap;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ✅ Tag color variants */
+.product-tag.success {
+  background-color: #28a745;
+}
+
+.product-tag.danger {
+  background-color: #dc3545;
+}
+
+/* ✅ Shine effect */
+.product-tag::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: -100%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: shine 2s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}

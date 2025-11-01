@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import '../CSS/trangchu.css';
 import BannerCarousel from "./BannerCarousel";
 import ProductFilter from './ProductFilter';
-import NewestProductsSlider from "./NewestProductsSlider";
+import TaggedProductsSlider from "./TaggedProductsSlider";
 import CategorySelectorSlider from "./CategorySelectorSlider";
 import VoucherInput from "./VoucherInput";
 
@@ -20,6 +20,8 @@ const normalizeText = (text) => {
 const TrangChu = () => {
   const [categories, setCategories] = useState([]);
   const [selectedSlug, setSelectedSlug] = useState(null);
+  const [selectedSlugNewest, setSelectedSlugNewest] = useState(null); // cho slider sản phẩm mới
+  const [selectedSlugBestSeller, setSelectedSlugBestSeller] = useState(null); // cho slider bán chạy
   const [products, setProducts] = useState([]);
   const [flashSales, setFlashSales] = useState([]);
   const [timer, setTimer] = useState({});
@@ -88,6 +90,15 @@ const TrangChu = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [flashSales]);
+
+  // ✅ Gán slug mặc định cho 2 slider khi danh mục đã load từ vị trí đầu tiên [0]
+  useEffect(() => {
+    if (categories.length > 0) {
+      setSelectedSlugNewest(categories[0].slug);     // dùng cho slider sản phẩm mới
+      setSelectedSlugBestSeller(categories[0].slug); // dùng cho slider bán chạy
+    }
+  }, [categories]);
+
 
   const getSalePrice = (productId, originalPrice) => {
     const applicableSales = flashSales.filter(flash =>
@@ -161,17 +172,27 @@ const TrangChu = () => {
         {/* ... lợi ích khách hàng giữ nguyên ... */}
       </div>
 
-        {!searchQuery && selectedSlug && (
-      <>
-        <div className="title-head">SẢN PHẨM MỚI</div>
+        {!searchQuery && selectedSlugNewest && selectedSlugBestSeller && (
+          <>
+            {/* Sản phẩm mới */}
+            <div className="title-head">SẢN PHẨM MỚI</div>
             <CategorySelectorSlider
-        selectedSlug={selectedSlug}
-        onSelect={setSelectedSlug} // ✅ khi chọn category mới, slider cập nhật
-        categories={categories}
-      />
-        <NewestProductsSlider slug={selectedSlug} />
-      </>
-    )}
+              selectedSlug={selectedSlugNewest}
+              onSelect={setSelectedSlugNewest}
+              categories={categories}
+            />
+            <TaggedProductsSlider slug={selectedSlugNewest} fetchType="newest" />
+
+            {/* Bán chạy */}
+            <div className="title-head">BÁN CHẠY</div>
+            <CategorySelectorSlider
+              selectedSlug={selectedSlugBestSeller}
+              onSelect={setSelectedSlugBestSeller}
+              categories={categories}
+            />
+            <TaggedProductsSlider slug={selectedSlugBestSeller} fetchType="bestseller" />
+          </>
+        )}
 
       <div className="title-head">
         {searchQuery
