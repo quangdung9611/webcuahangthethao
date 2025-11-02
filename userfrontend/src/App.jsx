@@ -19,6 +19,7 @@ import NewsDetail from './component/Webpage/NewsDetails';
 import AboutUs from './component/Webpage/AboutUs';
 import BrandPage from './component/Webpage/BrandPage';
 import MyOrders from './component/Webpage/MyOrder';
+import Products from './component/Webpage/Products/Products'
 function App() {
     return (
         <Router>
@@ -50,6 +51,7 @@ function App() {
                 <Route path="news/:slug" element={<NewsDetail />} />
                 <Route path="/pages/:slug" element={<AboutUs />} />
                 <Route path="/order-success/:id" element={<OrderSuccess />} />
+                <Route path="/products" element={<Products />} />
             </Routes>
             <Footer />
         </Router>

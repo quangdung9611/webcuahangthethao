@@ -69,5 +69,5 @@ app.use("/api/feedback",FeedBackRoutes);
 app.use("/api/tags", TagRouter);
 // Chạy server
 app.listen(5000, () => {
-  console.log('Server đang chạy tại http://localhost:5000');
+  console.log('Server đang chạy tại http://localhost:5000/api/');
 });

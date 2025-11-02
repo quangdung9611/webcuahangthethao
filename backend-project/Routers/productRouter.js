@@ -30,16 +30,21 @@ router.get("/brand/:slug", productController.getProductsByBrands);
 // 8. Lấy sản phẩm theo slug
 router.get("/slug/:slug", productController.getProductBySlug);
 
-// 9. Lấy sản phẩm theo ID (đặt cuối cùng để không bị nuốt)
+// 9. Lấy khoảng giá sản phẩm
+router.get("/price-range", productController.getPriceRange);
+
+// 10. Lấy sản phẩm theo ID (đặt cuối cùng để không bị nuốt)
 router.get("/:id", productController.getProductById);
 
-// 10. Tạo sản phẩm mới
+// 11. Tạo sản phẩm mới
 router.post("/", productController.uploadSingleImage, productController.createProduct);
 
-// 11. Cập nhật sản phẩm
+// 12. Cập nhật sản phẩm
 router.put("/:id", productController.uploadSingleImage, productController.updateProduct);
 
-// 12. Xóa sản phẩm
+// 13. Xóa sản phẩm
 router.delete("/:id", productController.deleteProduct);
+
+
 
 module.exports = router;

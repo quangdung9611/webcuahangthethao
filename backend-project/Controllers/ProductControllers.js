@@ -17,35 +17,80 @@ exports.uploadSingleImage = upload.single('image');
 // ====== PRODUCT CRUD ======
 
 exports.getAllProduct = (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 8;
-  const offset = (page - 1) * limit;
+  const {
+    search = "",
+    category = "all",
+    brand = "all",
+    priceMin = 0,
+    priceMax = 10000000,
+    page = 1,
+    limit = 8,
+  } = req.query;
 
-  const countSql = `SELECT COUNT(*) AS total FROM products`;
+  const numericLimit = Number(limit);
+  const numericPage = Number(page);
+  const offset = (numericPage - 1) * numericLimit;
+
+  let whereClauses = [];
+  let params = [];
+
+  if (search) {
+    whereClauses.push("p.name LIKE ?");
+    params.push(`%${search}%`);
+  }
+
+  if (category && category !== "all") {
+    whereClauses.push("c.slug = ?");
+    params.push(category);
+  }
+
+  if (brand && brand !== "all") {
+    whereClauses.push("b.slug = ?");
+    params.push(brand);
+  }
+
+  whereClauses.push("p.price BETWEEN ? AND ?");
+  params.push(Number(priceMin), Number(priceMax));
+
+  const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const countSql = `
+    SELECT COUNT(*) AS total
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.category_id
+    LEFT JOIN brands b ON p.brand_id = b.brand_id
+    ${whereSql}
+  `;
+
   const dataSql = `
-    SELECT product_id, name, slug, price, image, category_id
-    FROM products
-    ORDER BY created_at ASC
+    SELECT p.product_id, p.name, p.slug, p.price, p.image, p.category_id
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.category_id
+    LEFT JOIN brands b ON p.brand_id = b.brand_id
+    ${whereSql}
+    ORDER BY p.created_at DESC
     LIMIT ? OFFSET ?
   `;
 
-  db.query(countSql, (err, countResult) => {
+  db.query(countSql, params, (err, countResult) => {
     if (err) return res.status(500).json({ error: err.message });
 
     const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / numericLimit);
 
-    db.query(dataSql, [limit, offset], (err, dataResult) => {
+    db.query(dataSql, [...params, numericLimit, offset], (err, dataResult) => {
       if (err) return res.status(500).json({ error: err.message });
 
       res.json({
         products: dataResult,
         totalPages,
+        totalFilteredCount: total,
       });
     });
   });
 };
-// Lấy sản phẩm theo ID
+
+
 exports.getProductById = (req, res) => {
   const { id } = req.params;
   db.query('SELECT * FROM products WHERE product_id = ?', [id], (err, results) => {
@@ -55,21 +100,19 @@ exports.getProductById = (req, res) => {
   });
 };
 
-// Lấy sản phẩm theo slug
 exports.getProductBySlug = (req, res) => {
   const { slug } = req.params;
   db.query(
-  'SELECT product_id, name, slug, price, image, description, category_id, brand_id FROM products WHERE slug = ?',
-  [slug],
-  (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!results.length) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
-    res.json(results[0]);
-  });
-
+    'SELECT product_id, name, slug, price, image, description, category_id, brand_id FROM products WHERE slug = ?',
+    [slug],
+    (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!results.length) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+      res.json(results[0]);
+    }
+  );
 };
 
-// Lấy sản phẩm theo category slug có phân trang
 exports.getProductsByCategorySlug = (req, res) => {
   const { slug } = req.params;
   const page = parseInt(req.query.page) || 1;
@@ -77,7 +120,6 @@ exports.getProductsByCategorySlug = (req, res) => {
   const offset = (page - 1) * limit;
   const brand = req.query.brand || null;
 
-  // Đếm tổng số sản phẩm
   const countSql = `
     SELECT COUNT(*) AS total
     FROM products p
@@ -86,7 +128,6 @@ exports.getProductsByCategorySlug = (req, res) => {
     ${brand ? "AND p.brand_slug = ?" : ""}
   `;
 
-  // Truy vấn sản phẩm theo phân trang
   const dataSql = `
     SELECT p.product_id, p.name, p.slug, p.price, p.image, p.category_id
     FROM products p
@@ -117,7 +158,6 @@ exports.getProductsByCategorySlug = (req, res) => {
   });
 };
 
-// Lấy sản phẩm với tag id = 2 (Mới) theo category gán vào từ CategorySelectorSlider
 exports.getNewestProductsByCategorySlug = (req, res) => {
   const { slug } = req.params;
 
@@ -152,7 +192,7 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
       description: product.description
         ? product.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
         : '',
-      tags: product.tag_name // gán tag vào để frontend dùng product.tag
+      tags: product.tag_name
     }));
 
     res.json({
@@ -162,7 +202,6 @@ exports.getNewestProductsByCategorySlug = (req, res) => {
   });
 };
 
-// Lấy sản phẩm với tag id = 1 (Bán Chạy) theo category gán vào từ CategorySelectorSlider
 exports.getBestSellerProductsByCategorySlug = (req, res) => {
   const { slug } = req.params;
 
@@ -197,7 +236,7 @@ exports.getBestSellerProductsByCategorySlug = (req, res) => {
       description: product.description
         ? product.description.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim()
         : '',
-      tags: product.tag_name // dùng để hiển thị nhãn tag ở frontend
+      tags: product.tag_name
     }));
 
     res.json({
@@ -207,8 +246,6 @@ exports.getBestSellerProductsByCategorySlug = (req, res) => {
   });
 };
 
-
-// Lấy sản phẩm theo brand slug
 exports.getProductsByBrands = (req, res) => {
   const { slug } = req.params;
   const sql = `
@@ -222,8 +259,26 @@ exports.getProductsByBrands = (req, res) => {
   });
 };
 
-// Tạo sản phẩm mới
-// Tạo sản phẩm mới
+exports.getPriceRange = (req, res) => {
+  const sql = `SELECT MIN(price) AS min, MAX(price) AS max FROM products`;
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!results || results.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    const { min, max } = results[0];
+
+    if (min == null || max == null) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    res.json({ min, max });
+  });
+};
+
+
+
 exports.createProduct = (req, res) => {
   const { category_id, brand_id, name, slug, description, price } = req.body;
   const image = req.file ? req.file.filename : null;
@@ -233,27 +288,28 @@ exports.createProduct = (req, res) => {
   }
 
   const parsedPrice = parseInt(price, 10);
-  const safeDescription = description ? description.toString() : ""; // ✅ tránh lỗi ký tự HTML hoặc xuống dòng
+  const safeDescription = description ? description.toString() : "";
 
   const sql = `
     INSERT INTO products (category_id, brand_id, name, slug, description, price, image)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [category_id, brand_id, name, slug, safeDescription, parsedPrice, image], (err, result) => {
-    if (err) {
-      console.error("❌ Lỗi SQL khi thêm sản phẩm:", err);
-      return res.status(500).json({ error: err.message });
+  db.query(
+    sql,
+    [category_id, brand_id, name, slug, safeDescription, parsedPrice, image],
+    (err, result) => {
+      if (err) {
+        console.error("❌ Lỗi SQL khi thêm sản phẩm:", err);
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ message: 'Thêm sản phẩm thành công', product_id: result.insertId });
     }
-    res.json({ message: 'Thêm sản phẩm thành công', product_id: result.insertId });
-  });
+  );
 };
 
-
-// Cập nhật sản phẩm
 exports.updateProduct = (req, res) => {
   const { id } = req.params;
-
   const {
     category_id,
     brand_id,
@@ -261,18 +317,18 @@ exports.updateProduct = (req, res) => {
     slug,
     description,
     price,
-    image: oldImageName // tên ảnh cũ nếu không upload mới
+    image: oldImageName
   } = req.body;
 
   const image = req.file ? req.file.filename : oldImageName;
   const parsedPrice = parseInt(price, 10);
-  const safeDescription = description ? description.toString() : ""; // ✅ chuyển mô tả HTML thành chuỗi an toàn
+  const safeDescription = description ? description.toString() : "";
 
   if (!category_id || !brand_id || !name || !slug || !parsedPrice) {
     return res.status(400).json({ error: "Thiếu dữ liệu bắt buộc" });
   }
 
-  console.log("🟢 Mô tả nhận được:", safeDescription); // debug mô tả gửi lên
+  console.log("🟢 Mô tả nhận được:", safeDescription);
 
   const sql = `
     UPDATE products
@@ -293,8 +349,6 @@ exports.updateProduct = (req, res) => {
   );
 };
 
-
-// Xóa sản phẩm
 exports.deleteProduct = (req, res) => {
   const { id } = req.params;
   db.query('DELETE FROM materials WHERE product_id=?', [id], (err1) => {
@@ -306,14 +360,12 @@ exports.deleteProduct = (req, res) => {
   });
 };
 
-// Lấy sản phẩm theo category + brand có phân trang
 exports.getProductsByCategoryAndBrand = (req, res) => {
   const { categorySlug, brandSlug } = req.params;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 8;
   const offset = (page - 1) * limit;
 
-  // Đếm tổng số sản phẩm
   const countSql = `
     SELECT COUNT(*) AS total
     FROM products p
@@ -322,7 +374,6 @@ exports.getProductsByCategoryAndBrand = (req, res) => {
     WHERE c.slug = ? AND b.slug = ?
   `;
 
-  // Truy vấn sản phẩm theo phân trang
   const dataSql = `
     SELECT p.product_id, p.name, p.slug, p.price, p.image, p.category_id
     FROM products p
@@ -350,7 +401,6 @@ exports.getProductsByCategoryAndBrand = (req, res) => {
   });
 };
 
-// ==================== LẤY DANH MỤC KÈM THƯƠNG HIỆU ====================
 exports.getAllCategoriesWithBrands = (req, res) => {
   const sql = `
     SELECT c.category_id, c.name AS category_name, c.slug AS category_slug,
