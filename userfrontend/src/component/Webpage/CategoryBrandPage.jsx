@@ -14,6 +14,11 @@ const CategoryBrandPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // ✅ Ngăn trình duyệt giữ lại vị trí cuộn sau refresh
+  useEffect(() => {
+    window.history.scrollRestoration = "manual";
+  }, []);
+
   useEffect(() => {
     fetch(`http://localhost:5000/api/category/slug/${categorySlug}`)
       .then((res) => res.json())
@@ -32,7 +37,6 @@ const CategoryBrandPage = () => {
       .catch((err) => console.error("Lỗi khi fetch tên brand:", err));
   }, [brandSlug]);
 
-  // ✅ Lấy sản phẩm theo category + brand + phân trang
   useEffect(() => {
     const query = `http://localhost:5000/api/products/category/${categorySlug}/${brandSlug}?page=${currentPage}&limit=${PRODUCTS_PER_PAGE}`;
     fetch(query)
@@ -109,7 +113,11 @@ const CategoryBrandPage = () => {
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages || page === "...") return;
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const currentScroll = window.scrollY;
+    if (currentScroll < 200) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const getPaginationRange = () => {
@@ -195,7 +203,6 @@ const CategoryBrandPage = () => {
           )}
         </div>
 
-        {/* ✅ Hiển thị phân trang */}
         {totalPages > 1 && (
           <div className="pagination">
             <button

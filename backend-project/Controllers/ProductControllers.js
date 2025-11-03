@@ -63,7 +63,7 @@ exports.getAllProduct = (req, res) => {
   `;
 
   const dataSql = `
-    SELECT p.product_id, p.name, p.slug, p.price, p.image, p.category_id
+    SELECT p.product_id, p.name, p.slug, p.price, p.image, p.category_id, p.brand_id
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.category_id
     LEFT JOIN brands b ON p.brand_id = b.brand_id

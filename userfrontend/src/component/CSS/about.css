@@ -15,13 +15,12 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.3s ease;
-
 }
 
 .about-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .about-title {
@@ -29,6 +28,20 @@
   font-weight: 700;
   margin-bottom: 12px;
   color: #333;
+  text-align: center;
+}
+
+/* Căn giữa hình ảnh */
+.about-image-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.about-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
 }
 
 .about-content {

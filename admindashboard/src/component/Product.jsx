@@ -11,13 +11,15 @@ function Product() {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 8;
 
-  // ==== Lấy danh sách sản phẩm có phân trang ====
+  const normalizeId = (v) => String(v ?? "").trim();
+
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/products?page=${currentPage}&limit=1000`);
+      const res = await fetch(
+        `http://localhost:5000/api/products?page=${currentPage}&limit=1000`
+      );
       const data = await res.json();
 
-      // ✅ Đảm bảo lấy đúng dữ liệu dù backend trả về format nào
       let productList = [];
       if (Array.isArray(data)) {
         productList = data;
@@ -60,19 +62,25 @@ function Product() {
     fetchBrands();
   }, []);
 
-  // ==== Lọc sản phẩm theo loại và thương hiệu ====
   const filterProducts = (categoryId, brandId) => {
     let filtered = Array.isArray(products) ? [...products] : [];
 
-    if (categoryId) {
+    const hasCategory =
+      categoryId !== undefined && categoryId !== null && categoryId !== "";
+    const hasBrand =
+      brandId !== undefined && brandId !== null && brandId !== "";
+
+    if (hasCategory) {
+      const cid = normalizeId(categoryId);
       filtered = filtered.filter(
-        (product) => String(product.category_id) === String(categoryId)
+        (product) => normalizeId(product.category_id) === cid
       );
     }
 
-    if (brandId) {
+    if (hasBrand) {
+      const bid = normalizeId(brandId);
       filtered = filtered.filter(
-        (product) => String(product.brand_id) === String(brandId)
+        (product) => normalizeId(product.brand_id) === bid
       );
     }
 
@@ -90,7 +98,6 @@ function Product() {
     filterProducts(selectedCategory, brandId);
   };
 
-  // ==== Xóa sản phẩm ====
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
 
@@ -101,26 +108,9 @@ function Product() {
 
       if (res.ok) {
         alert("Xóa sản phẩm thành công!");
-
-        // ✅ Cập nhật danh sách ngay trên frontend
         const updatedProducts = products.filter((p) => p.product_id !== id);
         setProducts(updatedProducts);
-
-        // ✅ Lọc lại danh sách theo filter hiện tại
-        let filtered = [...updatedProducts];
-        if (selectedCategory) {
-          filtered = filtered.filter(
-            (p) => String(p.category_id) === String(selectedCategory)
-          );
-        }
-        if (selectedBrand) {
-          filtered = filtered.filter(
-            (p) => String(p.brand_id) === String(selectedBrand)
-          );
-        }
-
-        setFilteredProducts(filtered);
-        setCurrentPage(1);
+        filterProducts(selectedCategory, selectedBrand);
       } else {
         alert("Lỗi khi xóa sản phẩm!");
       }
@@ -129,7 +119,6 @@ function Product() {
     }
   };
 
-  // ==== Phân trang ====
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
   const currentProducts = Array.isArray(filteredProducts)
@@ -147,9 +136,9 @@ function Product() {
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ==== Giao diện ====
   return (
     <div className="user-list">
       <div className="header-actions">
@@ -210,6 +199,10 @@ function Product() {
                     src={`http://localhost:5000/images/${product.image}`}
                     alt={product.name}
                     className="product-image"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/images/default.png";
+                    }}
                   />
                 </td>
                 <td>
@@ -238,7 +231,6 @@ function Product() {
         </tbody>
       </table>
 
-      {/* ==== Phân trang ==== */}
       <div className="pagination">
         <button
           disabled={currentPage === 1}

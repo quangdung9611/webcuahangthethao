@@ -15,7 +15,11 @@ const CategoryPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ✅ Lấy voucher đã lưu
+  // ✅ Ngăn trình duyệt giữ lại vị trí cuộn sau refresh
+  useEffect(() => {
+    window.history.scrollRestoration = "manual";
+  }, []);
+
   useEffect(() => {
     const saved = localStorage.getItem("appliedVoucher");
     if (saved) {
@@ -23,7 +27,6 @@ const CategoryPage = () => {
     }
   }, []);
 
-  // ✅ Lấy tên danh mục
   useEffect(() => {
     fetch(`http://localhost:5000/api/category/slug/${slug}`)
       .then((res) => res.json())
@@ -35,7 +38,6 @@ const CategoryPage = () => {
       .catch((err) => console.error("Lỗi khi fetch tên danh mục:", err));
   }, [slug]);
 
-  // ✅ Lấy sản phẩm theo danh mục + thương hiệu + phân trang
   useEffect(() => {
     const query = `http://localhost:5000/api/products/category/${slug}?page=${currentPage}&limit=${PRODUCTS_PER_PAGE}${
       selectedBrand ? `&brand=${selectedBrand}` : ""
@@ -59,7 +61,6 @@ const CategoryPage = () => {
       });
   }, [slug, selectedBrand, currentPage]);
 
-  // ✅ Lấy flash sale
   useEffect(() => {
     fetch("http://localhost:5000/api/flash-sale/active")
       .then((res) => res.json())
@@ -67,7 +68,6 @@ const CategoryPage = () => {
       .catch((err) => console.error("Error fetching flash sales:", err));
   }, []);
 
-  // ✅ Countdown Flash Sale
   useEffect(() => {
     const interval = setInterval(() => {
       const newTimer = {};
@@ -82,7 +82,6 @@ const CategoryPage = () => {
     return () => clearInterval(interval);
   }, [flashSales]);
 
-  // ✅ Tính giá flash sale
   const getSalePrice = (productId, originalPrice) => {
     const applicableSales = flashSales.filter((flash) =>
       flash.products.some((p) => p.product_id === productId)
@@ -108,7 +107,6 @@ const CategoryPage = () => {
     return { price: salePrice, isFlash: true, end_at: bestSale.end_at };
   };
 
-  // ✅ Format countdown
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
     const h = Math.floor(totalSeconds / 3600);
@@ -117,7 +115,6 @@ const CategoryPage = () => {
     return `${h}h ${m}m ${s}s`;
   };
 
-  // ✅ Áp dụng voucher
   const applyVoucher = (price, product) => {
     if (!activeVoucher) return price;
     if (activeVoucher.category_id && activeVoucher.category_id !== product.category_id)
@@ -130,11 +127,14 @@ const CategoryPage = () => {
     }
   };
 
-  // ✅ Phân trang
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages || page === "...") return;
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const currentScroll = window.scrollY;
+    if (currentScroll < 200) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const getPaginationRange = () => {
@@ -223,7 +223,6 @@ const CategoryPage = () => {
           )}
         </div>
 
-        {/* ✅ Hiển thị phân trang */}
         {totalPages > 1 && (
           <div className="pagination">
             <button

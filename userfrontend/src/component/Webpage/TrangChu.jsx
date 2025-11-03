@@ -9,19 +9,10 @@ import VoucherInput from "./VoucherInput";
 
 const PRODUCTS_PER_PAGE = 8;
 
-const normalizeText = (text) => {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '');
-};
-
 const TrangChu = () => {
   const [categories, setCategories] = useState([]);
-  const [selectedSlug, setSelectedSlug] = useState(null);
-  const [selectedSlugNewest, setSelectedSlugNewest] = useState(null); // cho slider sản phẩm mới
-  const [selectedSlugBestSeller, setSelectedSlugBestSeller] = useState(null); // cho slider bán chạy
+  const [selectedSlugNewest, setSelectedSlugNewest] = useState(null);
+  const [selectedSlugBestSeller, setSelectedSlugBestSeller] = useState(null);
   const [products, setProducts] = useState([]);
   const [flashSales, setFlashSales] = useState([]);
   const [timer, setTimer] = useState({});
@@ -37,6 +28,10 @@ const TrangChu = () => {
     return params.get('search') || '';
   }, [location.search]);
 
+useEffect(() => {
+  window.scrollTo({ top: 0, behavior: "auto" }); // Giật lên đầu ngay lập tức
+}, []);
+
   useEffect(() => {
     fetch("http://localhost:5000/api/news/latest")
       .then(res => res.json())
@@ -49,12 +44,14 @@ const TrangChu = () => {
       .then(res => res.json())
       .then(data => {
         setCategories(data);
-        if (data.length > 0) setSelectedSlug(data[0].slug);
+        if (data.length > 0) {
+          setSelectedSlugNewest(data[0].slug);
+          setSelectedSlugBestSeller(data[0].slug);
+        }
       })
       .catch(err => console.error("Lỗi khi lấy danh mục:", err));
   }, []);
 
-  // ✅ Gọi API có phân trang
   useEffect(() => {
     fetch(`http://localhost:5000/api/products?page=${currentPage}&limit=${PRODUCTS_PER_PAGE}`)
       .then(res => res.json())
@@ -90,15 +87,6 @@ const TrangChu = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [flashSales]);
-
-  // ✅ Gán slug mặc định cho 2 slider khi danh mục đã load từ vị trí đầu tiên [0]
-  useEffect(() => {
-    if (categories.length > 0) {
-      setSelectedSlugNewest(categories[0].slug);     // dùng cho slider sản phẩm mới
-      setSelectedSlugBestSeller(categories[0].slug); // dùng cho slider bán chạy
-    }
-  }, [categories]);
-
 
   const getSalePrice = (productId, originalPrice) => {
     const applicableSales = flashSales.filter(flash =>
@@ -143,7 +131,6 @@ const TrangChu = () => {
   const handlePageChange = (pageNumber) => {
     if (pageNumber < 1 || pageNumber > totalPages || pageNumber === '...') return;
     setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getPaginationRange = () => {
@@ -172,27 +159,25 @@ const TrangChu = () => {
         {/* ... lợi ích khách hàng giữ nguyên ... */}
       </div>
 
-        {!searchQuery && selectedSlugNewest && selectedSlugBestSeller && (
-          <>
-            {/* Sản phẩm mới */}
-            <div className="title-head">SẢN PHẨM MỚI</div>
-            <CategorySelectorSlider
-              selectedSlug={selectedSlugNewest}
-              onSelect={setSelectedSlugNewest}
-              categories={categories}
-            />
-            <TaggedProductsSlider slug={selectedSlugNewest} fetchType="newest" />
+      {!searchQuery && selectedSlugNewest && selectedSlugBestSeller && (
+        <>
+          <div className="title-head">SẢN PHẨM MỚI</div>
+          <CategorySelectorSlider
+            selectedSlug={selectedSlugNewest}
+            onSelect={setSelectedSlugNewest}
+            categories={categories}
+          />
+          <TaggedProductsSlider slug={selectedSlugNewest} fetchType="newest" />
 
-            {/* Bán chạy */}
-            <div className="title-head">BÁN CHẠY</div>
-            <CategorySelectorSlider
-              selectedSlug={selectedSlugBestSeller}
-              onSelect={setSelectedSlugBestSeller}
-              categories={categories}
-            />
-            <TaggedProductsSlider slug={selectedSlugBestSeller} fetchType="bestseller" />
-          </>
-        )}
+          <div className="title-head">BÁN CHẠY</div>
+          <CategorySelectorSlider
+            selectedSlug={selectedSlugBestSeller}
+            onSelect={setSelectedSlugBestSeller}
+            categories={categories}
+          />
+          <TaggedProductsSlider slug={selectedSlugBestSeller} fetchType="bestseller" />
+        </>
+      )}
 
       <div className="title-head">
         {searchQuery
@@ -240,8 +225,10 @@ const TrangChu = () => {
                           <span>{Number(finalPrice).toLocaleString('vi-VN')} VNĐ</span>
                         )}
                       </p>
-                      {isFlash && end_at && timer[product.product_id] > 0 && (
-                        <p className="countdown">{formatTime(timer[product.product_id])}</p>
+                                            {isFlash && end_at && timer[product.product_id] > 0 && (
+                        <p className="countdown">
+                          {formatTime(timer[product.product_id])}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -249,7 +236,7 @@ const TrangChu = () => {
               );
             })
           ) : (
-                      <div style={{ padding: '20px', width: '100%', textAlign: 'center' }}>
+            <div style={{ padding: '20px', width: '100%', textAlign: 'center' }}>
               Không tìm thấy sản phẩm nào phù hợp.
             </div>
           )}
@@ -323,4 +310,3 @@ const TrangChu = () => {
 };
 
 export default TrangChu;
-  

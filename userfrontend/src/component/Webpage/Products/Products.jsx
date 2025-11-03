@@ -9,6 +9,7 @@ import "../../CSS/Products.css";
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Tạo object filters từ URL params
   const filters = useMemo(() => ({
     search: searchParams.get("search") || "",
     category: searchParams.get("category") || "all",
@@ -25,19 +26,18 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalFilteredCount, setTotalFilteredCount] = useState(0);
 
-
   useEffect(() => {
     fetch("http://localhost:5000/api/category")
       .then(res => res.json())
       .then(data => setCategories(data))
-      .catch(err => console.error("❌ Lỗi lấy danh mục:", err));
+      .catch(err => console.error("Lỗi lấy danh mục:", err));
   }, []);
 
   useEffect(() => {
     fetch("http://localhost:5000/api/brand")
       .then(res => res.json())
       .then(data => setBrands(data))
-      .catch(err => console.error("❌ Lỗi lấy thương hiệu:", err));
+      .catch(err => console.error("Lỗi lấy thương hiệu:", err));
   }, []);
 
   useEffect(() => {
@@ -51,9 +51,10 @@ const Products = () => {
           setPriceRange([data.min, data.max]);
         }
       })
-      .catch(err => console.error("❌ Lỗi lấy khoảng giá:", err));
+      .catch(err => console.error("Lỗi lấy khoảng giá:", err));
   }, []);
 
+  // Fetch sản phẩm theo bộ lọc
   useEffect(() => {
     const query = new URLSearchParams({
       search: filters.search,
@@ -71,18 +72,18 @@ const Products = () => {
         return res.json();
       })
       .then(data => {
-        console.log("📦 Dữ liệu sản phẩm nhận được:", data);
         setProducts(Array.isArray(data.products) ? data.products : []);
         setTotalPages(data.totalPages || 1);
         setTotalFilteredCount(data.totalFilteredCount || 0);
       })
       .catch(err => {
-        console.error("❌ Lỗi lấy sản phẩm:", err);
+        console.error("Lỗi lấy sản phẩm:", err);
         setProducts([]);
         setTotalPages(1);
       });
   }, [filters]);
 
+  // Cập nhật bộ lọc và reset trang về 1 nếu cần
   const updateFilter = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set(key, value);
@@ -93,7 +94,6 @@ const Products = () => {
   return (
     <div className="products-page">
       <div className="products-layout">
-        {/* Box lọc sản phẩm */}
         <div className="products-filter-box">
           <ProductsFilterSidebar
             filters={filters}
@@ -104,7 +104,6 @@ const Products = () => {
           />
         </div>
 
-        {/* Box hiển thị sản phẩm + phân trang */}
         <div className="products-panel-box">
           <div className="products-panel-content">
             <h3>Kết quả tìm kiếm (Tổng: {totalFilteredCount} sản phẩm)</h3>
@@ -113,11 +112,13 @@ const Products = () => {
             ) : (
               <ProductsGrid products={products} />
             )}
-            <ProductsPaginationControls
-              currentPage={filters.page}
-              totalPages={totalPages}
-              updatePage={(page) => updateFilter("page", page)}
-            />
+            {products.length > 0 && (
+              <ProductsPaginationControls
+                currentPage={filters.page}
+                totalPages={totalPages}
+                updatePage={(page) => updateFilter("page", page)}
+              />
+            )}
           </div>
         </div>
       </div>
